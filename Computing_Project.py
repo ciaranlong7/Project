@@ -1,3 +1,4 @@
 G =20
 print(G)
-print('hello@)')
+print('test')
+print('new test')
