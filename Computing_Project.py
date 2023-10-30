@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.integrate import trapezoid
 
 #Defining Variables (Milestone Problem)
-
 G = 6.6743e-11
 M_sun = 2e30
 M = 10*M_sun
@@ -32,43 +32,52 @@ def integrand(R, v):
     f = F_v(t,v)
     return f*4*np.pi*R
 
-#Now evaluate integral with trapezium rule (check implementation of trapezium rule):
+#Now evaluate integral with trapezium rule:
 def L_v(r_in, r_out, v):
     bins = 1000
     span = r_out - r_in
     increment = span/bins
-    #sum of all trapeziums
-    total = 0
-    Rs = []
-    Ls = []
-    #k = (np.log10(r_out) - np.log10(r_in))/(bins)
-    #k is for log R
     
-    for i in range(bins):
-        #r = r_in*(10**(k*(i+1)))
-        r = r_in + i*increment
-        Rs.append(r)
-        L_v = integrand(r, v)
-        Ls.append(L_v)
+    ys = []
+    
+    Rs = np.logspace(np.log10(r_in), np.log10(r_out), bins)
+    
+    for r in Rs:
+        y = integrand(r, v)
+        ys.append(y)
         
-    for i in range(len(Rs)-1):
-        delta_R = (Rs[i+1]-Rs[i])
-        rectangle = delta_R*Ls[i]
-        triangle = delta_R*(Ls[i+1]-Ls[i])/2
-        trapezium = rectangle + triangle
-        total += trapezium
+    #total sum of all trapeziums
+    l_v = trapezoid(ys, x=Rs, dx=increment)
         
-    return total, Rs, Ls
+    return l_v, Rs, ys
 
-#Temporarily let v = 1e16
-v = 1e16
+def spectrum(r_in, r_out):
+    log_vs = []
+    spectrum = []
+    log_vl_v = []
+    v_start = 10e14
+    v_fin = 10e19
+    bins = 1000
+    span = v_fin - v_start
+    increment = span/bins
+    
+    vs = np.logspace(np.log10(v_start), np.log10(v_fin), bins)
+    
+    for v in vs:
+        log_vs.append(np.log(v))
+        l_v, Rs, ys = L_v(r_in, r_out, v)
+        spectrum.append(l_v)
+        log_vl_v.append(np.log10(v*l_v))
+    
+    return spectrum, vs, log_vs,log_vl_v
 
-total, Rs, Ls = L_v(r_in, r_out, v)
+spectrum, vs, log_vs, log_vl_v = spectrum(r_in, r_out)
 
-plt.plot(Rs, Ls)
-plt.xlabel('Radius')
-plt.ylabel('Luminosity')
-plt.title('L(R) Graph')
-plt.show()
+tot = trapezoid(spectrum, x=vs, dx=increment)
 
-#Next to do - plot L against log(R) instead of just R
+plt.plot(log_vl_v, log_vs)
+plt.xlabel('log(v / Hz)')
+plt.ylabel('log(v*L_v / HzW)')
+plt.title('log(freq*luminosity)/ log(frequency) Graph (all base 10)')
+
+#Can also plot the non log graph
