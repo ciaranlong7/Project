@@ -13,44 +13,62 @@ R_g = (G*M)/(c**2)
 h = 6.62607015e-34
 k = 1.380649e-23
 
-#Creating list of R values between 6 and 10**5
-start_R = 6
-end_R = 10**5
-increment_R = (end_R-start_R)/100000
-
-R = [start_R + i*increment_R for i in range(end_R - start_R)]
+#Creating list of R values between 6R_g and 10**5R_g
+r_in = 6*R_g
+r_out = 10**5*R_g
 
 def T(R):
     return ((G*M*M_dot)/(8*np.pi*(R**3)*S_B_constant))**(1/4)
 
-#Calculating T Values that correspond to R values
-T_R = [T(i*R_g) for i in R]
+#Defining luminosity per unit frequency per unit area
+def F_v(T,v): 
+    return ((2*np.pi*h*(v**3)/(c**2))/(np.exp((h*v)/(k*T))-1))
 
-#Line plot of result (impossible to decipher anything)
-# plt.plot(R, T_R)
-# plt.xlabel('Radius')
-# plt.ylabel('T(R)')
-# plt.title('T(R) Graph')
+#Now need to calculate integral. To do this, I must first calculate the integrand of eq 8.3
+#I can then evaluate the integral using the trapezium rule.
 
-log_R = [np.log(i) for i in R]
-T_log_R = [T(i) for i in log_R]
+def integrand(R, v):
+    t = T(R)
+    f = F_v(t,v)
+    return f*4*np.pi*R
 
-#I notice for this graph, you observe more of a curve as the increment between R values is made smaller
-# plt.plot(log_R, T_log_R)
-# plt.xlabel('log(Radius)')
-# plt.ylabel('T(log(R))')
-# plt.title('T(log(R)) Graph')
+#Now evaluate integral with trapezium rule (check implementation of trapezium rule):
+def L_v(r_in, r_out, v):
+    bins = 1000
+    span = r_out - r_in
+    increment = span/bins
+    #sum of all trapeziums
+    total = 0
+    Rs = []
+    Ls = []
+    #k = (np.log10(r_out) - np.log10(r_in))/(bins)
+    #k is for log R
+    
+    for i in range(bins):
+        #r = r_in*(10**(k*(i+1)))
+        r = r_in + i*increment
+        Rs.append(r)
+        L_v = integrand(r, v)
+        Ls.append(L_v)
+        
+    for i in range(len(Rs)-1):
+        delta_R = (Rs[i+1]-Rs[i])
+        rectangle = delta_R*Ls[i]
+        triangle = delta_R*(Ls[i+1]-Ls[i])/2
+        trapezium = rectangle + triangle
+        total += trapezium
+        
+    return total, Rs, Ls
 
-#Defining frequency range (1e14 to 1e19)
-start_v = 6
-end_v = 10**5
-increment_v = (end_v-start_v)/10000
-
-v = [start_v + i*increment_v for i in range(end_v - start_v)]
 #Temporarily let v = 1e16
 v = 1e16
-#Luminosity per unit frequency per unit area; F DOES NOT correspond to frequency
-def F(T_R):
-    return [((2*np.pi*h*(v**3)/(c**2))/(np.exp((h*v)/(k*TEMP))-1)) for TEMP in T_R]
 
-#To do - supposed to plot F for a range of frequencies, but how can I plot F for a range of frequencies and temperatures.
+total, Rs, Ls = L_v(r_in, r_out, v)
+
+plt.plot(Rs, Ls)
+plt.xlabel('Radius')
+plt.ylabel('Luminosity')
+plt.title('L(R) Graph')
+plt.show()
+
+#Next to do - plot L against log(R) instead of just R
