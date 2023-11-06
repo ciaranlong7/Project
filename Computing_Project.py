@@ -20,8 +20,14 @@ r_out = 10**5*R_g
 def T(R):
     return ((G*M*M_dot)/(8*np.pi*(R**3)*S_B_constant))**(1/4)
 
+#Taking viscous forces into account
+#Throwing up warning - RuntimeWarning: invalid value encountered in double_scalars
+def T_visc(R):
+    return (((3*G*M*M_dot)/(8*np.pi*(R**3)*S_B_constant))*(1-(r_in/R)))**(1/4)
+
 #Defining luminosity per unit frequency per unit area
-def F_v(T,v): 
+#Throwing up warning - RuntimeWarning: overflow encountered in exp
+def F_v(T,v):
     return ((2*np.pi*h*(v**3)/(c**2))/(np.exp((h*v)/(k*T))-1))
 
 #Now need to calculate integral. To do this, I must first calculate the integrand of eq 8.3
@@ -88,10 +94,25 @@ plt.plot(log_vs, log_vl_v)
 plt.xlabel('log10(v / Hz)')
 plt.ylabel('log10(v*L_v / HzW)')
 plt.title('log10(v*L_v) against log10(v)')
+plt.show()
 
 plt.plot(vs, spectrum)
 plt.xlabel('v / Hz')
 plt.ylabel('L_v / W')
 plt.title('Spectrum across defined frequency range')
+plt.show()
 
-#Note - I don't consider the effects of viscous forces between different annuli in the disc
+bins_ = 1000
+Rs = np.logspace(np.log10(r_in), np.log10(r_out), bins_)
+Ts = []
+Ts_visc = []
+for r in Rs:
+    Ts.append(T(r))
+    Ts_visc.append(T_visc(r))
+plt.plot(np.log10(Rs), Ts, label = 'no viscous forces considered')
+plt.plot(np.log10(Rs), Ts_visc, label = 'viscous forces considered')
+plt.xlabel('log(R / m)')
+plt.ylabel('T(R) / K')
+plt.title('Temperature as a function of R (log x-axis scale)')
+plt.legend(loc = 'upper right')
+plt.show()
