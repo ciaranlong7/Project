@@ -55,8 +55,8 @@ def spectrum(r_in, r_out):
     log_vs = []
     spectrum = []
     log_vl_v = []
-    v_start = 10e14
-    v_fin = 10e19
+    v_start = 1e14
+    v_fin = 1e19
     bins = 1000
     span = v_fin - v_start
     increment = span/bins
@@ -64,20 +64,34 @@ def spectrum(r_in, r_out):
     vs = np.logspace(np.log10(v_start), np.log10(v_fin), bins)
     
     for v in vs:
-        log_vs.append(np.log(v))
+        log_vs.append(np.log10(v))
         l_v, Rs, ys = L_v(r_in, r_out, v)
         spectrum.append(l_v)
         log_vl_v.append(np.log10(v*l_v))
     
-    return spectrum, vs, log_vs,log_vl_v
+    return spectrum, vs, log_vs, log_vl_v
 
+#spectrum is luminosity spectrum (luminosity at all frequencies in 10^14 - 10^19 range)
 spectrum, vs, log_vs, log_vl_v = spectrum(r_in, r_out)
 
+#total luminosity from the system
+#Should be roughly 7x10^30. I get about 7x10^31.
+v_start = 10e14
+v_fin = 10e19
+bins = 1000
+span = v_fin - v_start
+increment = span/bins
 tot = trapezoid(spectrum, x=vs, dx=increment)
+print(tot)
 
-plt.plot(log_vl_v, log_vs)
-plt.xlabel('log(v / Hz)')
-plt.ylabel('log(v*L_v / HzW)')
-plt.title('log(freq*luminosity)/ log(frequency) Graph (all base 10)')
+plt.plot(log_vs, log_vl_v)
+plt.xlabel('log10(v / Hz)')
+plt.ylabel('log10(v*L_v / HzW)')
+plt.title('log10(v*L_v) against log10(v)')
 
-#Can also plot the non log graph
+plt.plot(vs, spectrum)
+plt.xlabel('v / Hz')
+plt.ylabel('L_v / W')
+plt.title('Spectrum across defined frequency range')
+
+#Note - I don't consider the effects of viscous forces between different annuli in the disc
