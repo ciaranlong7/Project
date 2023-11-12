@@ -122,6 +122,32 @@ plt.show()
 print("Max temperature with viscous forces considered:")
 print(f"{max(Ts_visc):.6e} K")
 
+#Plot f_v as a fn of T for multiple different vs.
+def plot_f_v():
+    vs = [1e14, 1e15, 1e16, 1e17, 1e18, 1e19]
+    Ts = np.linspace(min(Ts_visc), max(Ts_visc), 1000)
+    
+    #List of lists with the inner lists being the f_v values across different T values
+    f_vs = []
+    
+    for v in vs:
+        my_list = []
+        for T in Ts:
+            f_v = F_v(T, v)
+            #Get the following warning - RuntimeWarning: divide by zero encountered in log10
+            #Caused by taking log10 of a very small f_v value. Computer treats this as taking log10(0)
+            my_list.append(np.log10(f_v))
+        f_vs.append(my_list)
+        
+    for i in range(len(f_vs)):
+        plt.plot(Ts, f_vs[i], label = f"Frequency = {vs[i]:.1e}")
+    
+    plt.xlabel('T / K')
+    plt.ylabel('log10(F_v / W $Hz^-1$ $m^-1$)')
+    plt.title('F_v against T at different frequency values')
+    plt.legend(loc = 'best')
+    return plt.show()
+
 #Now convergence testing
 def convergence_check():
     v_start = 1e14
@@ -138,7 +164,8 @@ def convergence_check():
     for v in vs:
         l_v, my_integrands = L_v(r_in, r_out, v, 10000)
         all_spectrums.append(l_v)
-        
+    
+    total_luminosities = [trapezoid(all_spectrums, x=vs)]
     all_spectrums = np.array(all_spectrums)
     
     #Vary bins to check for convergence
@@ -148,12 +175,20 @@ def convergence_check():
         for v in vs:
             l_v, my_integrands = L_v(r_in, r_out, v, bins)
             my_list.append(l_v)
+        total_luminosities.append(trapezoid(my_list, x=vs))
         all_spectrums = np.vstack((all_spectrums, my_list))
     
-    #Normalising with respect to reference value
+    #Normalising all_spectrums with respect to reference L_v
     normalised_spectrums = all_spectrums/all_spectrums[0, :]
+    return normalised_spectrums, total_luminosities, vs
+
+def plot_convergence_check():
+    normalised_spectrums, total_luminosities, vs = convergence_check_L_v()
+    
+    #First plot convergence test for L_v
     
     counter = -1
+    plt.figure()
     for row in normalised_spectrums:
         if counter == -1:
             plt.plot(vs, row, label = "Reference Spectrum - 10000 bins")
@@ -163,7 +198,12 @@ def convergence_check():
 
     plt.xlabel('V / Hz')
     plt.ylabel('L_v / L_v(ref)')
-    plt.title('Convergence testing')
+    plt.title('Convergence test for L_v')
     plt.legend(loc = 'best')
-
+    
+    #Now plot convergence test for Total L
+    
+    #Unsure how to proceed.
+    #Supposed to plot Total L / Total L(ref) against log(Nlog(v)). But I have a 1000 length list of v values but only 5 Total Ls
+    
     return plt.show()
