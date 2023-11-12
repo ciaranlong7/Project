@@ -49,7 +49,7 @@ def L_v(r_in, r_out, v, bins):
         # Integrand calculated at the midpoint of each bin because at r_in, T_visc=0 giving a div0 error
         midpoint_r = (Rs[i+1] + Rs[i])/2
         new_Rs.append(midpoint_r)
-        my_integrand = integrand(midpoint_r, 6, v)
+        my_integrand = integrand(midpoint_r, r_in, v)
         my_integrands.append(my_integrand)
         
     #total sum of all trapeziums
@@ -164,8 +164,7 @@ def convergence_check():
     for v in vs:
         l_v, my_integrands = L_v(r_in, r_out, v, 10000)
         all_spectrums.append(l_v)
-    
-    total_luminosities = [trapezoid(all_spectrums, x=vs)]
+        
     all_spectrums = np.array(all_spectrums)
     
     #Vary bins to check for convergence
@@ -175,20 +174,12 @@ def convergence_check():
         for v in vs:
             l_v, my_integrands = L_v(r_in, r_out, v, bins)
             my_list.append(l_v)
-        total_luminosities.append(trapezoid(my_list, x=vs))
         all_spectrums = np.vstack((all_spectrums, my_list))
     
-    #Normalising all_spectrums with respect to reference L_v
+    #Normalising with respect to reference value
     normalised_spectrums = all_spectrums/all_spectrums[0, :]
-    return normalised_spectrums, total_luminosities, vs
-
-def plot_convergence_check():
-    normalised_spectrums, total_luminosities, vs = convergence_check_L_v()
-    
-    #First plot convergence test for L_v
     
     counter = -1
-    plt.figure()
     for row in normalised_spectrums:
         if counter == -1:
             plt.plot(vs, row, label = "Reference Spectrum - 10000 bins")
@@ -198,12 +189,11 @@ def plot_convergence_check():
 
     plt.xlabel('V / Hz')
     plt.ylabel('L_v / L_v(ref)')
-    plt.title('Convergence test for L_v')
+    plt.title('Convergence testing for L_v')
     plt.legend(loc = 'best')
-    
-    #Now plot convergence test for Total L
-    
-    #Unsure how to proceed.
-    #Supposed to plot Total L / Total L(ref) against log(Nlog(v)). But I have a 1000 length list of v values but only 5 Total Ls
-    
+
     return plt.show()
+    
+#Plotting convergence test for Total L
+#Unsure how to proceed.
+#Supposed to plot Total L / Total L(ref) against log(Nlog(v)). But I have a 1000 length list of v values but only 5 Total Ls
