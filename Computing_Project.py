@@ -85,15 +85,12 @@ print("Total luminosity from the system:")
 print(tot)
 
 plt.plot(log_vs, log_vl_v)
-plt.xlabel('log10(v / Hz)')
-plt.ylabel('log10(v*L_v / HzW)')
-plt.title('log10(v*L_v) against log10(v)')
-plt.show()
-
-plt.plot(vs, spectrum)
-plt.xlabel('v / Hz')
-plt.ylabel('L_v / W')
-plt.title('Spectrum across defined frequency range')
+plt.tick_params(axis='both', color = 'white')
+plt.xlabel('$log_{10}$($\\nu$ / Hz)', color = 'white', fontsize = 16)
+plt.ylabel('$log_{10}$($\\nu$*$L_{v}$ / HzW)', color = 'white', fontsize = 16)
+plt.xticks(color = 'white', fontsize = 12)
+plt.yticks(color = 'white', fontsize = 12)
+plt.title('Spectrum across $10^{14}$ - $10^{19}$ Hz frequency range', color = 'white', fontsize = 13)
 plt.show()
 
 #Plotting the difference between T and T_visc
@@ -108,14 +105,17 @@ Ts_visc = []
 for i in range(len(Rs)-1):
     midpoint_r = (Rs[i+1] + Rs[i])/2
     new_Rs.append(midpoint_r)
-    Ts.append(T(midpoint_r))
+    Ts.append(T(midpoint_r)) #divide by 1e6 to scale if desired
     Ts_visc.append(T_visc(midpoint_r, 6))
     
-plt.plot(np.log10(new_Rs), Ts, label = 'no viscous forces considered')
-plt.plot(np.log10(new_Rs), Ts_visc, label = 'viscous forces considered')
-plt.xlabel('log10(R / m)')
-plt.ylabel('T(R) / K')
-plt.title('Temperature as a fn of R (log10 x-axis scale)')
+plt.plot(np.log10(new_Rs), Ts, label = 'No viscous forces considered')
+plt.plot(np.log10(new_Rs), Ts_visc, label = 'Viscous forces considered')
+plt.tick_params(axis='both', color = 'white')
+plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)', color = 'white', fontsize = 16)
+plt.ylabel('T(R) / $10^6$K', color = 'white', fontsize = 16)
+plt.xticks(color = 'white', fontsize = 12)
+plt.yticks(color = 'white', fontsize = 12)
+plt.title('Temperature as a function of $log_{10}$(Radius)', color = 'white', fontsize = 13)
 plt.legend(loc = 'upper right')
 plt.show()
 
@@ -147,6 +147,8 @@ def plot_f_v():
     plt.title('F_v against T at different frequency values')
     plt.legend(loc = 'best')
     return plt.show()
+
+plot_f_v()
 
 #Now convergence testing
 def convergence_check():
