@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import trapezoid
+from functools import lru_cache
 
 #Defining Variables (Milestone Problem)
 G = 6.6743e-11
@@ -13,6 +14,7 @@ R_g = (G*M)/(c**2)
 h = 6.62607015e-34
 k = 1.380649e-23
 
+@lru_cache(maxsize=None)
 def T(r):
     return ((G*M*M_dot)/(8*np.pi*((r*R_g)**3)*S_B_constant))**(1/4)
 
@@ -20,6 +22,7 @@ def T(r):
 #Used to throw up warning - RuntimeWarning: invalid value encountered in double_scalars
 #Reason for warning - When I define Rs, the first R value is slightly smaller than the original r_in value
 #This leads to r_in/R > 1 and hence fn is negative and (fn)**(1/4) gives an 'invalid value'
+@lru_cache(maxsize=None)
 def T_visc(r, r_in):
     return (((3*G*M*M_dot)/(8*np.pi*((r**3)*(R_g**3))*S_B_constant))*(1-((r_in/(r))**(1/2))))**(1/4)
 
@@ -27,17 +30,20 @@ def T_visc(r, r_in):
 #Throwing up warning - RuntimeWarning: overflow encountered in exp
 #It's ok to ignore this warning (still performs calculation, just takes time to do).
 #See https://www.statology.org/runtimewarning-overflow-encountered-in-exp
+@lru_cache(maxsize=None)
 def F_v(T,v):
     return ((2*np.pi*h*(v**3)/(c**2))/(np.exp((h*v)/(k*T))-1))
 
 #Now need to calculate integral. To do this, I must first calculate the integrand of eq 8.3
 #I can then evaluate the integral using the trapezium rule.
+@lru_cache(maxsize=None)
 def integrand(r, r_in, v):
     t = T_visc(r, r_in) #Change to T(R) to ignore viscous forces
     f_v = F_v(t, v)
     return f_v*4*np.pi*r*(R_g**2)
 
 #Now evaluate integral with trapezium rule:
+@lru_cache(maxsize=None)
 def L_v(r_in, r_out, v, bins):
     
     my_integrands = []
@@ -57,6 +63,7 @@ def L_v(r_in, r_out, v, bins):
         
     return l_v, my_integrands
 
+@lru_cache(maxsize=None)
 def spectrum(r_in, r_out):
     log_vs = []
     spectrum = []
@@ -123,6 +130,7 @@ print("Max temperature with viscous forces considered:")
 print(f"{max(Ts_visc):.6e} K")
 
 #Plot f_v as a fn of T for multiple different vs.
+@lru_cache(maxsize=None)
 def plot_f_v():
     #The following two lists must be the same length. If they aren't tweak first for loop below
     small_vs = [1e14, 1e15, 1e16]
@@ -163,6 +171,7 @@ def plot_f_v():
 plot_f_v()
 
 #Now convergence testing
+@lru_cache(maxsize=None)
 def convergence_check():
     v_start = 1e14
     v_fin = 1e19
@@ -185,7 +194,9 @@ def convergence_check():
     
     for bins in bins_test:
         my_list = []
+        log_vs = []
         for v in vs:
+            log_vs.append(np.log10(v))
             l_v, my_integrands = L_v(r_in, r_out, v, bins)
             my_list.append(l_v)
         all_spectrums = np.vstack((all_spectrums, my_list))
@@ -196,18 +207,20 @@ def convergence_check():
     counter = -1
     for row in normalised_spectrums:
         if counter == -1:
-            plt.plot(vs, row, label = "Reference Spectrum - 10000 bins")
+            plt.plot(log_vs, row, label = "Reference Spectrum - 10000 bins")
         else:
-            plt.plot(vs, row, label = f"{bins_test[counter]} bins")
+            plt.plot(log_vs, row, label = f"{bins_test[counter]} bins")
         counter += 1
 
-    plt.xlabel('$\\nu$ / Hz')
+    plt.xlabel('$log_{10}$($\\nu$ / Hz)')
     plt.ylabel('L_$\\nu$ / L_$\\nu$(ref)')
     plt.title('Convergence testing for L_v')
     plt.legend(loc = 'best')
 
     return plt.show()
+
+convergence_check()
     
-#Plotting convergence test for Total L
-#Unsure how to proceed.
-#Supposed to plot Total L / Total L(ref) against log(Nlog(v)). But I have a 1000 length list of v values but only 5 Total Ls
+#Plotting convergence test for Total L:
+#How to proceed:
+#Plot Total L / Total L(ref) against log(N)
