@@ -173,23 +173,31 @@ def convergence_check():
     
     #Array containing all spectrums, with each spectrum being different due to a different number of bins
     all_spectrums = []
+    total_ratios = []
     
     #Reference L_v
     for v in vs:
         l_v, my_integrands = L_v(r_in, r_out, v, 10000)
         all_spectrums.append(l_v)
-        
+
+    #Total L from reference spectrum
+    ref_tot = trapezoid(all_spectrums, x=vs)
     all_spectrums = np.array(all_spectrums)
     
     #Vary bins to check for convergence
-    
+    log_bins = []
     for bins in bins_test:
         my_list = []
         log_vs = []
+        log_bins.append(np.log10(bins))
         for v in vs:
             log_vs.append(np.log10(v))
             l_v, my_integrands = L_v(r_in, r_out, v, bins)
             my_list.append(l_v)
+        #Total luminosity from spectrum/Total luminosity (ref specctrum). (my_list is the spectrum here.)
+        tot = trapezoid(my_list, x=vs)
+        total_ratio = tot/ref_tot
+        total_ratios.append(total_ratio)
         all_spectrums = np.vstack((all_spectrums, my_list))
     
     #Normalising with respect to reference value
@@ -202,16 +210,24 @@ def convergence_check():
         else:
             plt.plot(log_vs, row, label = f"{bins_test[counter]} bins")
         counter += 1
-
+    
+    
     plt.xlabel('$log_{10}$($\\nu$ / Hz)')
     plt.ylabel('L_$\\nu$ / L_$\\nu$(ref)')
     plt.title('Convergence testing for L_v')
     plt.legend(loc = 'best')
 
+    #Creating a new figure to display convergence test for total L
+    plt.figure()
+    plt.plot(log_bins, total_ratios)
+    plt.xlabel('Log(No of bins)')
+    plt.ylabel('$\\frac{Total L}{Total L(Ref)}$')
+    plt.title('Convergence testing for Total L')
+
     return plt.show()
 
 convergence_check()
-    
+
 #Plotting convergence test for Total L:
 #How to proceed:
 #Plot Total L / Total L(ref) against log(N)
