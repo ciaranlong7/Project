@@ -85,12 +85,12 @@ print("Total luminosity from the system:")
 print(tot)
 
 plt.plot(log_vs, log_vl_v)
-plt.tick_params(axis='both', color = 'white')
-plt.xlabel('$log_{10}$($\\nu$ / Hz)', color = 'white', fontsize = 16)
-plt.ylabel('$log_{10}$($\\nu$*$L_{v}$ / HzW)', color = 'white', fontsize = 16)
-plt.xticks(color = 'white', fontsize = 12)
-plt.yticks(color = 'white', fontsize = 12)
-plt.title('Spectrum across $10^{14}$ - $10^{19}$ Hz frequency range', color = 'white', fontsize = 13)
+# plt.tick_params(axis='both', color = 'white')
+plt.xlabel('$log_{10}$($\\nu$ / Hz)')
+plt.ylabel('$log_{10}$($\\nu$*$L_{v}$ / HzW)')
+# plt.xticks(color = 'white', fontsize = 12)
+# plt.yticks(color = 'white', fontsize = 12)
+plt.title('Spectrum across $10^{14}$ - $10^{19}$ Hz frequency range')
 plt.show()
 
 #Plotting the difference between T and T_visc
@@ -110,12 +110,12 @@ for i in range(len(Rs)-1):
     
 plt.plot(np.log10(new_Rs), Ts, label = 'No viscous forces considered')
 plt.plot(np.log10(new_Rs), Ts_visc, label = 'Viscous forces considered')
-plt.tick_params(axis='both', color = 'white')
-plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)', color = 'white', fontsize = 16)
-plt.ylabel('T(R) / $10^6$K', color = 'white', fontsize = 16)
-plt.xticks(color = 'white', fontsize = 12)
-plt.yticks(color = 'white', fontsize = 12)
-plt.title('Temperature as a function of $log_{10}$(Radius)', color = 'white', fontsize = 13)
+# plt.tick_params(axis='both', color = 'white')
+plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)')
+plt.ylabel('T(R) / $10^6$K')
+# plt.xticks(color = 'white', fontsize = 12)
+# plt.yticks(color = 'white', fontsize = 12)
+plt.title('Temperature as a function of $log_{10}$(Radius)')
 plt.legend(loc = 'upper right')
 plt.show()
 
@@ -124,28 +124,40 @@ print(f"{max(Ts_visc):.6e} K")
 
 #Plot f_v as a fn of T for multiple different vs.
 def plot_f_v():
-    vs = [1e14, 1e15, 1e16, 1e17, 1e18, 1e19]
+    #The following two lists must be the same length. If they aren't tweak first for loop below
+    small_vs = [1e14, 1e15, 1e16]
+    large_vs = [1e17, 1e18, 1e19]
     Ts = np.linspace(min(Ts_visc), max(Ts_visc), 1000)
     
     #List of lists with the inner lists being the f_v values across different T values
-    f_vs = []
+    smallf_vs = []
+    largef_vs = []
     
-    for v in vs:
-        my_list = []
+    for i in range(len(small_vs)):
+        small_list = []
+        large_list = []
         for T in Ts:
-            f_v = F_v(T, v)
+            smallf_v = F_v(T, small_vs[i])
+            largef_v = F_v(T, large_vs[i])
             #Get the following warning - RuntimeWarning: divide by zero encountered in log10
             #Caused by taking log10 of a very small f_v value. Computer treats this as taking log10(0)
-            my_list.append(np.log10(f_v))
-        f_vs.append(my_list)
-        
-    for i in range(len(f_vs)):
-        plt.plot(Ts, f_vs[i], label = f"Frequency = {vs[i]:.1e}")
+            small_list.append(np.log10(smallf_v))
+            large_list.append(np.log10(largef_v))
+        smallf_vs.append(small_list)
+        largef_vs.append(large_list)
     
-    plt.xlabel('T / K')
-    plt.ylabel('log10(F_v / W $Hz^-1$ $m^-1$)')
-    plt.title('F_v against T at different frequency values')
-    plt.legend(loc = 'best')
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)    
+    for i in range(len(smallf_vs)):
+        ax1.plot(Ts, smallf_vs[i], label = f"Frequency = {small_vs[i]:.1e}")
+        ax2.plot(Ts, largef_vs[i], label = f"Frequency = {large_vs[i]:.1e}")
+
+    ax1.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+    ax2.set_xlabel('T / K')
+    ax1.set_ylabel('log10(F_$\\nu$ / W $Hz^-1$ $m^-1$)')
+    ax2.set_ylabel('log10(F_$\\nu$ / W $Hz^-1$ $m^-1$)')
+    ax1.set_title('F_$\\nu$ against T at different frequency values')
+    ax1.legend(loc = 'best')
+    ax2.legend(loc = 'best')
     return plt.show()
 
 plot_f_v()
@@ -189,8 +201,8 @@ def convergence_check():
             plt.plot(vs, row, label = f"{bins_test[counter]} bins")
         counter += 1
 
-    plt.xlabel('V / Hz')
-    plt.ylabel('L_v / L_v(ref)')
+    plt.xlabel('$\\nu$ / Hz')
+    plt.ylabel('L_$\\nu$ / L_$\\nu$(ref)')
     plt.title('Convergence testing for L_v')
     plt.legend(loc = 'best')
 
