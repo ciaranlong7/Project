@@ -153,8 +153,8 @@ def plot_f_v():
 
     ax1.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
     ax2.set_xlabel('T / K')
-    ax1.set_ylabel('log10(F_$\\nu$ / W $Hz^-1$ $m^-1$)')
-    ax2.set_ylabel('log10(F_$\\nu$ / W $Hz^-1$ $m^-1$)')
+    ax1.set_ylabel('$log_{10}$(F_$\\nu$ / W $Hz^{-1}$ $m^{-1}$)')
+    ax2.set_ylabel('$log_{10}$(F_$\\nu$ / W $Hz^{-1}$ $m^{-1}$)')
     ax1.set_title('F_$\\nu$ against T at different frequency values')
     ax1.legend(loc = 'best')
     ax2.legend(loc = 'best')
@@ -168,6 +168,7 @@ def convergence_check():
     v_fin = 1e19
     steps = 1000
     vs = np.logspace(np.log10(v_start), np.log10(v_fin), steps)
+    fixed_vs = [1e14, 1e15, 1e16, 1e17, 1e18, 1e19]
     
     bins_test = [500, 1000, 2000, 5000, 20000]
     
@@ -177,7 +178,7 @@ def convergence_check():
     
     #Reference L_v
     for v in vs:
-        l_v, my_integrands = L_v(r_in, r_out, v, 10000)
+        l_v, my_integrands = L_v(r_in, r_out, v, 10000) #10000 is ref bins
         all_spectrums.append(l_v)
 
     #Total L from reference spectrum
@@ -199,9 +200,23 @@ def convergence_check():
         total_ratio = tot/ref_tot
         total_ratios.append(total_ratio)
         all_spectrums = np.vstack((all_spectrums, my_list))
-    
+
+    # Filling an array delta_L which is (L_v-L_v(ref))/L_v(ref)
+    delta_L = np.empty((1,len(all_spectrums[0, :])))
+    x = 0
+    for row in all_spectrums:
+        extra_list = []
+        for i in range(len(row)):
+            extra_list.append(row[i]-all_spectrums[0, i])
+        if x == 0:
+            delta_L = np.array(extra_list)
+            x += 1
+        else:
+            delta_L = np.vstack((delta_L, extra_list))
+        
     #Normalising with respect to reference value
     normalised_spectrums = all_spectrums/all_spectrums[0, :]
+    normalised_delta_L = delta_L/all_spectrums[0, :]
     
     counter = -1
     for row in normalised_spectrums:
@@ -211,23 +226,64 @@ def convergence_check():
             plt.plot(log_vs, row, label = f"{bins_test[counter]} bins")
         counter += 1
     
-    
     plt.xlabel('$log_{10}$($\\nu$ / Hz)')
-    plt.ylabel('L_$\\nu$ / L_$\\nu$(ref)')
+    plt.ylabel('$\\frac{L_{v}}{L_{v}(Ref)}$')
     plt.title('Convergence testing for L_v')
     plt.legend(loc = 'best')
 
     #Creating a new figure to display convergence test for total L
     plt.figure()
     plt.plot(log_bins, total_ratios)
-    plt.xlabel('Log(No of bins)')
+    plt.plot(log_bins, [1,1,1,1,1]) #This represents the reference spectrum of 10000 bins
+    plt.xlabel('$log_{10}$(No of bins)')
     plt.ylabel('$\\frac{Total L}{Total L(Ref)}$')
     plt.title('Convergence testing for Total L')
 
+    spectrum_fixed_v = []
+    for bins in bins_test:
+        l_v, my_integrands = L_v(r_in, r_out, 1e17, bins) #1e17 is ref v
+        spectrum_fixed_v.append(l_v)
+    
+    spectrum_fixed_v = np.array(spectrum_fixed_v)
+    for v in fixed_vs:
+        fixed_v_list = []
+        for bins in bins_test:
+            l_v, my_integrands = L_v(r_in, r_out, v, bins)
+            fixed_v_list.append(l_v)
+        spectrum_fixed_v = np.vstack((spectrum_fixed_v, fixed_v_list))
+
+    normalised_spectrum_fixed_v = spectrum_fixed_v/spectrum_fixed_v[0, :]
+
+    plt.figure()
+    counter_fixed = -1
+    for row in normalised_spectrum_fixed_v:
+        if counter_fixed == -1:
+            plt.plot(log_bins, row, label = "Reference Spectrum - 1e17 Hz")
+        else:
+            plt.plot(log_bins, row, label = f"{fixed_vs[counter_fixed]} Hz")
+        counter_fixed += 1
+
+    plt.xlabel('$log_{10}$(No of bins)')
+    plt.ylabel('$\\frac{L_{v}}{L_{v}(Ref)}$')
+    plt.title('More convergence testing for L_v')
+    plt.legend(loc = 'best')
+
+    plt.figure()
+    z = -1
+    for row in normalised_delta_L:
+        if z == -1:
+            plt.plot(log_vs, row, label = "Reference Spectrum - 10000 bins")
+        else:
+            plt.plot(log_vs, row, label = f"{bins_test[z]} bins")
+        z += 1
+    
+    plt.xlabel('$log_{10}$(No of bins)')
+    plt.ylabel('$\\frac{\u0394L_{v}}{L_{v}(Ref)}$')
+    plt.title('Different convergence testing for L_v')
+    plt.legend(loc = 'best')
+    
     return plt.show()
 
 convergence_check()
 
-#Plotting convergence test for Total L:
-#How to proceed:
-#Plot Total L / Total L(ref) against log(N)
+#What have I done wrong with the L_v/L_v(Ref) plot?
