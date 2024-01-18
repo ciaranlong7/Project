@@ -69,16 +69,16 @@ def spectrum(r_in, r_out):
     
     for v in vs:
         log_vs.append(np.log10(v))
-        l_v, my_integrands = L_v(6, 10**5, v, 1000) # R_g units
+        l_v, my_integrands = L_v(r_in, r_out, v, 1000) # R_g units
         spectrum.append(l_v)
         log_vl_v.append(np.log10(v*l_v))
     
     return spectrum, vs, log_vs, log_vl_v
 
 #spectrum is luminosity spectrum (luminosity at all frequencies in 10^14 - 10^19 range)
-spectrum, vs, log_vs, log_vl_v = spectrum(6, 10**5)
 
 def plot_spectrum():
+    spec, vs, log_vs, log_vl_v = spectrum(6, 10**5)
     plt.plot(log_vs, log_vl_v)
     # plt.tick_params(axis='both', color = 'white')
     plt.xlabel('$log_{10}$($\\nu$ / Hz)')
@@ -88,8 +88,7 @@ def plot_spectrum():
     plt.title('Spectrum across $10^{14}$ - $10^{19}$ Hz frequency range')
 
     #total luminosity from the system
-    #Should be roughly 7x10^30. I get about 7x10^31.
-    tot = trapezoid(spectrum, x=vs)
+    tot = trapezoid(spec, x=vs)
     print("Total luminosity from the system:")
     print(tot)
     
@@ -286,3 +285,18 @@ def convergence_check():
     return plt.show()
 
 #What have I done wrong with the L_v/L_v(Ref) plot?
+
+#r_ins is a list of varying r_in values
+def spectrum_vary_rin(r_ins):
+    for r_in in r_ins:
+        spec, vs, log_vs, log_vl_v = spectrum(r_in, 10**5) #r_out constant at 10^5 R_g
+        tot = trapezoid(spec, x=vs)
+        plt.plot(log_vs, spec, label = f"$r_{{in}}$ = {r_in}$R_{{g}}$, Total L = {tot:.1e}")
+    
+    plt.xlabel('$log_{10}$($\\nu$ / Hz)')
+    plt.ylabel('$log_{10}$($\\nu$*$L_{v}$ / HzW)')
+    plt.title('Spectrum across $10^{14}$ - $10^{19}$ Hz frequency range with varying r_in')
+    plt.legend(loc = 'best')
+    return plt.show()
+
+r_ins = [1.23, 100, 1000, 10000]
