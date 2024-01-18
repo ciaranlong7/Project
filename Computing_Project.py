@@ -78,49 +78,52 @@ def spectrum(r_in, r_out):
 #spectrum is luminosity spectrum (luminosity at all frequencies in 10^14 - 10^19 range)
 spectrum, vs, log_vs, log_vl_v = spectrum(6, 10**5)
 
-#total luminosity from the system
-#Should be roughly 7x10^30. I get about 7x10^31.
-tot = trapezoid(spectrum, x=vs)
-print("Total luminosity from the system:")
-print(tot)
+def plot_spectrum():
+    plt.plot(log_vs, log_vl_v)
+    # plt.tick_params(axis='both', color = 'white')
+    plt.xlabel('$log_{10}$($\\nu$ / Hz)')
+    plt.ylabel('$log_{10}$($\\nu$*$L_{v}$ / HzW)')
+    # plt.xticks(color = 'white', fontsize = 12)
+    # plt.yticks(color = 'white', fontsize = 12)
+    plt.title('Spectrum across $10^{14}$ - $10^{19}$ Hz frequency range')
 
-plt.plot(log_vs, log_vl_v)
-# plt.tick_params(axis='both', color = 'white')
-plt.xlabel('$log_{10}$($\\nu$ / Hz)')
-plt.ylabel('$log_{10}$($\\nu$*$L_{v}$ / HzW)')
-# plt.xticks(color = 'white', fontsize = 12)
-# plt.yticks(color = 'white', fontsize = 12)
-plt.title('Spectrum across $10^{14}$ - $10^{19}$ Hz frequency range')
-plt.show()
+    #total luminosity from the system
+    #Should be roughly 7x10^30. I get about 7x10^31.
+    tot = trapezoid(spectrum, x=vs)
+    print("Total luminosity from the system:")
+    print(tot)
+    
+    return plt.show()
 
 #Plotting the difference between T and T_visc
-
-bins = 1000
-r_in = 6
-r_out = 10**5
-Rs = np.logspace(np.log10(r_in), np.log10(r_out), bins)
-new_Rs = []
-Ts = []
-Ts_visc = []
-for i in range(len(Rs)-1):
-    midpoint_r = (Rs[i+1] + Rs[i])/2
-    new_Rs.append(midpoint_r)
-    Ts.append(T(midpoint_r)) #divide by 1e6 to scale if desired
-    Ts_visc.append(T_visc(midpoint_r, 6))
+def T_vs_T_visc():
+    bins = 1000
+    r_in = 6
+    r_out = 10**5
+    Rs = np.logspace(np.log10(r_in), np.log10(r_out), bins)
+    new_Rs = []
+    Ts = []
+    Ts_visc = []
+    for i in range(len(Rs)-1):
+        midpoint_r = (Rs[i+1] + Rs[i])/2
+        new_Rs.append(midpoint_r)
+        Ts.append(T(midpoint_r)) #divide by 1e6 to scale if desired
+        Ts_visc.append(T_visc(midpoint_r, 6))
     
-plt.plot(np.log10(new_Rs), Ts, label = 'No viscous forces considered')
-plt.plot(np.log10(new_Rs), Ts_visc, label = 'Viscous forces considered')
-# plt.tick_params(axis='both', color = 'white')
-plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)')
-plt.ylabel('T(R) / $10^6$K')
-# plt.xticks(color = 'white', fontsize = 12)
-# plt.yticks(color = 'white', fontsize = 12)
-plt.title('Temperature as a function of $log_{10}$(Radius)')
-plt.legend(loc = 'upper right')
-plt.show()
-
-print("Max temperature with viscous forces considered:")
-print(f"{max(Ts_visc):.6e} K")
+    plt.plot(np.log10(new_Rs), Ts, label = 'No viscous forces considered')
+    plt.plot(np.log10(new_Rs), Ts_visc, label = 'Viscous forces considered')
+    # plt.tick_params(axis='both', color = 'white')
+    plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)')
+    plt.ylabel('T(R) / $10^6$K')
+    # plt.xticks(color = 'white', fontsize = 12)
+    # plt.yticks(color = 'white', fontsize = 12)
+    plt.title('Temperature as a function of $log_{10}$(Radius)')
+    plt.legend(loc = 'upper right')
+    
+    print("Max temperature with viscous forces considered:")
+    print(f"{max(Ts_visc):.6e} K")
+    
+    return plt.show()
 
 #Plot f_v as a fn of T for multiple different vs.
 def plot_f_v():
@@ -159,8 +162,6 @@ def plot_f_v():
     ax1.legend(loc = 'best')
     ax2.legend(loc = 'best')
     return plt.show()
-
-plot_f_v()
 
 #Now convergence testing
 def convergence_check():
@@ -277,13 +278,11 @@ def convergence_check():
             plt.plot(log_vs, row, label = f"{bins_test[z]} bins")
         z += 1
     
-    plt.xlabel('$log_{10}$(No of bins)')
+    plt.xlabel('$log_{10}$($\\nu$ / Hz)')
     plt.ylabel('$\\frac{\u0394L_{v}}{L_{v}(Ref)}$')
-    plt.title('Different convergence testing for L_v')
+    plt.title('Different y-axis to display convergence testing for L_v')
     plt.legend(loc = 'best')
     
     return plt.show()
-
-convergence_check()
 
 #What have I done wrong with the L_v/L_v(Ref) plot?
