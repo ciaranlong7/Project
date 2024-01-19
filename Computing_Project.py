@@ -11,17 +11,17 @@ c = 299792458
 h = 6.62607015e-34
 k = 1.380649e-23
 def R_g(M):
-    return (G*M)/(c**2)
+    return (G*(M*M_sun))/(c**2)
 
 def T(r, M):
-    return ((G*M*M_dot)/(8*np.pi*((r*R_g(M))**3)*S_B_constant))**(1/4)
+    return ((G*(M*M_sun)*M_dot)/(8*np.pi*((r*R_g(M))**3)*S_B_constant))**(1/4)
 
 #Taking viscous forces into account
 #Used to throw up warning - RuntimeWarning: invalid value encountered in double_scalars
 #Reason for warning - When I define Rs, the first R value is slightly smaller than the original r_in value
 #This leads to r_in/R > 1 and hence fn is negative and (fn)**(1/4) gives an 'invalid value'
 def T_visc(r, r_in, M):
-    return (((3*G*M*M_dot)/(8*np.pi*((r**3)*((R_g(M))**3))*S_B_constant))*(1-((r_in/(r))**(1/2))))**(1/4)
+    return (((3*G*(M*M_sun)*M_dot)/(8*np.pi*((r**3)*((R_g(M))**3))*S_B_constant))*(1-((r_in/(r))**(1/2))))**(1/4)
 
 def T_vs_R(r_in, r_out, M, bins):
     Rs = np.logspace(np.log10(r_in), np.log10(r_out), bins)
@@ -290,7 +290,7 @@ def spectrum_vary_rin(r_ins, r_out, v_start, v_fin, M, bins):
     for r_in in r_ins:
         spec, vs, log_vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, bins) #r_out constant. Usually at 10^5 R_g
         tot = trapezoid(spec, x=vs)
-        plt.plot(log_vs, spec, label = f"$r_{{in}}$ = {r_in}$R_{{g}}$, Total L = {tot:.1e} W")
+        plt.plot(log_vs, spec, label = f"$r_{{in}}$ = {r_in}$R_{{g}}$, $L_{{Tot}}$ = {tot:.1e} W")
     
     plt.xlabel('$log_{10}$($\\nu$ / Hz)')
     plt.ylabel('$L_{v}$ / W')
@@ -314,4 +314,17 @@ def T_visc_vary_rin(r_ins, r_out, M, bins):
     plt.title('Viscous forces temp as a function of $log_{10}$(R) with varying r_in')
     plt.legend(loc = 'best')
     
+    return plt.show()
+
+#Ms is a list of varying M values
+def spectrum_vary_M(r_in, r_out, v_start, v_fin, Ms, bins):
+    for M in Ms:
+        spec, vs, log_vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, bins) #r_out constant. Usually at 10^5 R_g
+        tot = trapezoid(spec, x=vs)
+        plt.plot(log_vs, spec, label = f"M = {M}$M_{{sun}}$, $L_{{Tot}}$ = {tot:.1e} W")
+    
+    plt.xlabel('$log_{10}$($\\nu$ / Hz)')
+    plt.ylabel('$L_{v}$ / W')
+    plt.title('Spectrum across $10^{14}$ - $10^{19}$ Hz with varying M')
+    plt.legend(loc = 'best')
     return plt.show()
