@@ -165,16 +165,23 @@ def T_vs_T_visc(r_in, r_out, M, M_dot, bins):
     return plt.show()
 
 #Now convergence testing
-def convergence_check(r_in, r_out, v_start, v_fin, M, M_dot, steps):
+def convergence_check(r_in, r_out, v_start, v_fin, M, M_dot, bins):
     start = time.time()
-    vs = np.logspace(np.log10(v_start), np.log10(v_fin), steps)
+    vs = np.logspace(np.log10(v_start), np.log10(v_fin), bins)
     
     bins_test = [500, 1000, 2000, 5000, 20000]
 
-    ref_spectrum, vs, log_vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, bins)
-    ref_tot = trapezoid(spec, x=vs)
+    ref_spectrum = []
+    
+    #Reference L_v
+    for v in vs:
+        l_v, my_integrands = L_v(r_in, r_out, v, M, M_dot, 10000) #These are reference parameters
+        ref_spectrum.append(l_v)
 
-    # #Regular y axis
+    #Total L from reference spectrum
+    ref_tot = trapezoid(all_spectrums, x=vs)
+
+    # # Regular y axis
     # log_bins = []
     # total_ratios = []
     # all_spectrums = np.array(ref_spectrum)
@@ -345,11 +352,11 @@ def spectrum_vary_Mdot(r_in, r_out, v_start, v_fin, M, M_dots, bins):
     for M_dot in M_dots:
         spec, vs, log_vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, bins)
         tot = trapezoid(spec, x=vs)
-        plt.plot(log_vs, spec, label = f"$M_{{dot}}$ = {M_dot} Kg$s^{{-1}}$, $L_{{Tot}}$ = {tot:.1e}W")
+        plt.plot(log_vs, spec, label = f"$M_{{dot}}$ = {M_dot:.1e} Kg$s^{{-1}}$, $L_{{Tot}}$ = {tot:.1e}W")
 
     plt.xlabel('$log_{10}$($\\nu$ / Hz)')
     plt.ylabel('$L_{v}$ / W')
-    plt.title('Spectrum across $10^{14}$ - $10^{19}$ Hz with varying M')
+    plt.title('Spectrum across $10^{14}$ - $10^{19}$ Hz with varying $\dot{M}$')
     plt.legend(loc = 'best')
     return plt.show()
 
@@ -362,23 +369,11 @@ def T_visc_vary_Mdot(r_in, r_out, M, M_dots, bins):
             midpoint_r = (Rs[i+1] + Rs[i])/2
             new_Rs.append(midpoint_r)
             Ts_visc.append(T_visc(midpoint_r, r_in, M, M_dot)/1e6)
-        plt.plot(np.log10(new_Rs), Ts_visc, label = f"$M_{{dot}}$ = {M_dot} Kg$s^{{-1}}$, $T_{{Max}}$ = {round(max(Ts_visc), 1)}$*10^6$K")
+        plt.plot(np.log10(new_Rs), Ts_visc, label = f"$M_{{dot}}$ = {M_dot:.1e} Kg$s^{{-1}}$, $T_{{Max}}$ = {round(max(Ts_visc), 1)}$*10^6$K")
     
     plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)')
     plt.ylabel('T(R) / $10^6$K')
-    plt.title('Viscous forces temp as a function of $log_{10}$(R) with varying M')
+    plt.title('Viscous forces temp as a function of $log_{10}$(R) with varying $\dot{M}$')
     plt.legend(loc = 'best')
     
     return plt.show()
-
-r_ins = [1.23, 6, 100, 1000]
-Ms = [0.1, 1, 10, 100]
-M_dots = [10**14, 10**15, 10**16]
-r_in = 6
-r_out = 10**5
-v_start = 1e14
-v_fin = 1e19
-M = 10
-M_dot = 10**15
-bins = 1000
-spectrum_vary_Mdot(r_in, r_out, v_start, v_fin, M, M_dots, bins)
