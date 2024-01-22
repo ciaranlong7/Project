@@ -33,7 +33,7 @@ def T_vs_R(r_in, r_out, M, M_dot, bins):
         new_Rs.append(midpoint_r)
         Ts.append(T(midpoint_r, M, M_dot)) #divide by 1e6 to scale if desired
         Ts_visc.append(T_visc(midpoint_r, r_in, M, M_dot))
-    return Ts, Ts_visc
+    return Ts, Ts_visc, new_Rs
 
 #Defining luminosity per unit frequency per unit area
 #Throwing up warning - RuntimeWarning: overflow encountered in exp
@@ -48,7 +48,7 @@ def plot_f_v(r_in, r_out, M, M_dot, bins):
     small_vs = [1e14, 1e15, 1e16]
     large_vs = [1e17, 1e18, 1e19]
 
-    Ts, Ts_visc = T_vs_R(r_in, r_out, M, M_dot, bins)
+    Ts, Ts_visc, new_Rs = T_vs_R(r_in, r_out, M, M_dot, bins)
         
     new_Ts = np.linspace(min(Ts_visc), max(Ts_visc), bins)
     
@@ -86,7 +86,7 @@ def plot_f_v(r_in, r_out, M, M_dot, bins):
 #Now need to calculate integral. To do this, I must first calculate the integrand of eq 8.3
 #I can then evaluate the integral using the trapezium rule.
 def integrand(r, r_in, v, M, M_dot):
-    t = T_visc(r, r_in, M, M_dot) #Change to T(R) to ignore viscous forces
+    t = T_visc(r, r_in, M, M_dot) #Change to T to ignore viscous forces
     f_v = F_v(t, v)
     return f_v*4*np.pi*r*((R_g(M))**2)
 
@@ -110,22 +110,20 @@ def L_v(r_in, r_out, v, M, M_dot, bins):
         
     return l_v, my_integrands
 
+#spectrum is luminosity spectrum (luminosity at all frequencies in 10^14 - 10^19 range)
 def spectrum(r_in, r_out, v_start, v_fin, M, M_dot, bins): #Note, same bins for logspacing v and L_v as easier. May not want this though.
-    log_vs = []
     spectrum = []
     log_vl_v = []
     
     vs = np.logspace(np.log10(v_start), np.log10(v_fin), bins)
+    log_vs = np.log10(vs)
     
     for v in vs:
-        log_vs.append(np.log10(v))
         l_v, my_integrands = L_v(r_in, r_out, v, M, M_dot, bins) # R_g units
         spectrum.append(l_v)
         log_vl_v.append(np.log10(v*l_v))
     
     return spectrum, vs, log_vs, log_vl_v
-
-#spectrum is luminosity spectrum (luminosity at all frequencies in 10^14 - 10^19 range)
 
 def plot_spectrum():
     spec, vs, log_vs, log_vl_v = spectrum(6, 10**5, 1e14, 1e19, 10, 10**15, 1000)
@@ -147,7 +145,7 @@ def plot_spectrum():
 #Plotting the difference between T and T_visc
 def T_vs_T_visc(r_in, r_out, M, M_dot, bins):
 
-    Ts, Ts_visc = T_vs_R(r_in, r_out, M, M_dot, bins)
+    Ts, Ts_visc, new_Rs = T_vs_R(r_in, r_out, M, M_dot, bins)
     
     plt.plot(np.log10(new_Rs), Ts, label = 'No viscous forces considered')
     plt.plot(np.log10(new_Rs), Ts_visc, label = 'Viscous forces considered')
@@ -165,11 +163,13 @@ def T_vs_T_visc(r_in, r_out, M, M_dot, bins):
     return plt.show()
 
 #Now convergence testing
-def convergence_check(r_in, r_out, v_start, v_fin, M, M_dot, bins):
+def convergence_check(r_in, r_out, v_start, v_fin, v_steps, M, M_dot):
     start = time.time()
-    vs = np.logspace(np.log10(v_start), np.log10(v_fin), bins)
+    vs = np.logspace(np.log10(v_start), np.log10(v_fin), v_steps)
+    log_vs = np.log10(vs)
     
     bins_test = [500, 1000, 2000, 5000, 20000]
+    log_bins = np.log10(bins_test)
 
     ref_spectrum = []
     
@@ -179,112 +179,99 @@ def convergence_check(r_in, r_out, v_start, v_fin, M, M_dot, bins):
         ref_spectrum.append(l_v)
 
     #Total L from reference spectrum
-    ref_tot = trapezoid(all_spectrums, x=vs)
+    ref_tot = trapezoid(ref_spectrum, x=vs)
 
-    # # Regular y axis
-    # log_bins = []
-    # total_ratios = []
-    # all_spectrums = np.array(ref_spectrum)
-    # for bins in bins_test:
-    #     my_list = []
-    #     log_bins.append(np.log10(bins))
-        # spec, vs, log_vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, bins)
-    #     for v in vs:
-    #         l_v, my_integrands = L_v(r_in, r_out, v, M, M_dot, bins)
-    #         my_list.append(l_v)
-    #     tot = trapezoid(my_list, x=vs)
-    #     total_ratios.append(tot/ref_tot)
-    #     all_spectrums = np.vstack((all_spectrums, my_list))
+    # Regular y axis
+    total_ratios = []
+    all_spectrums = np.array(ref_spectrum)
+    for bins in bins_test:
+        my_list = []
+        for v in vs:
+            l_v, my_integrands = L_v(r_in, r_out, v, M, M_dot, bins)
+            my_list.append(l_v)
+        tot = trapezoid(my_list, x=vs)
+        total_ratios.append(tot/ref_tot)
+        all_spectrums = np.vstack((all_spectrums, my_list))
 
-    # normalised_spectrums = all_spectrums/all_spectrums[0, :]
-    # counter = -1
-    # for row in normalised_spectrums:
-    #     if counter == -1:
-    #         plt.plot(log_vs, row, label = "Reference Spectrum - 10000 bins")
-    #     else:
-    #         plt.plot(log_vs, row, label = f"{bins_test[counter]} bins")
-    #     counter += 1
+    normalised_spectrums = all_spectrums/all_spectrums[0, :]
+    counter = -1
+    for row in normalised_spectrums:
+        if counter == -1:
+            plt.plot(log_vs, row, label = "Reference Spectrum - 10000 bins")
+        else:
+            plt.plot(log_vs, row, label = f"{bins_test[counter]} bins")
+        counter += 1
     
-    # plt.xlabel('$log_{10}$($\\nu$ / Hz)')
-    # plt.ylabel('$\\frac{L_{v}}{L_{v}(Ref)}$')
-    # plt.title('Convergence testing for L_v')
-    # plt.legend(loc = 'best')
+    plt.xlabel('$log_{10}$($\\nu$ / Hz)')
+    plt.ylabel('$\\frac{L_{v}}{L_{v}(Ref)}$')
+    plt.title('Convergence testing for L_v')
+    plt.legend(loc = 'best')
     
-    # # Delta L y axis
-    # log_bins = []
-    # total_ratios = []
-    # norm_delta_Ls = np.array([0]*len(ref_spectrum))
-    # for bins in bins_test:
-    #     norm_delta_L = []
-    #     my_list = []
-    #     log_bins.append(np.log10(bins))
-    #     for i in range(len(vs)):
-    #         l_v, my_integrands = L_v(r_in, r_out, vs[i], M, M_dot, bins)
-    #         my_list.append(l_v)
-    #         norm_delta_L.append((l_v-ref_spectrum[i])/ref_spectrum[i])
-    #     tot = trapezoid(my_list, x=vs)
-    #     total_ratios.append(tot/ref_tot)
-    #     norm_delta_Ls  = np.vstack((norm_delta_Ls, norm_delta_L))
+    # Delta L y axis
+    total_ratios = []
+    norm_delta_Ls = np.array([0]*len(ref_spectrum))
+    for bins in bins_test:
+        norm_delta_L = []
+        my_list = []
+        for i in range(len(vs)):
+            l_v, my_integrands = L_v(r_in, r_out, vs[i], M, M_dot, bins)
+            my_list.append(l_v)
+            norm_delta_L.append((l_v-ref_spectrum[i])/ref_spectrum[i])
+        tot = trapezoid(my_list, x=vs)
+        total_ratios.append(tot/ref_tot)
+        norm_delta_Ls  = np.vstack((norm_delta_Ls, norm_delta_L))
         
-    # plt.figure()
-    # counter = -1
-    # for row in norm_delta_Ls:
-    #     if counter == -1:
-    #         plt.plot(log_vs, row, label = "Reference Spectrum - 10000 bins")
-    #     else:
-    #         plt.plot(log_vs, row, label = f"{bins_test[counter]} bins")
-    #     counter += 1
+    plt.figure()
+    counter = -1
+    for row in norm_delta_Ls:
+        if counter == -1:
+            plt.plot(log_vs, row, label = "Reference Spectrum - 10000 bins")
+        else:
+            plt.plot(log_vs, row, label = f"{bins_test[counter]} bins")
+        counter += 1
     
-    # plt.xlabel('$log_{10}$($\\nu$ / Hz)')
-    # plt.ylabel('$\\frac{\u0394L_{v}}{L_{v}(Ref)}$')
-    # plt.title('Different y-axis scale - Convergence testing for L_v')
-    # plt.legend(loc = 'best')
+    plt.xlabel('$log_{10}$($\\nu$ / Hz)')
+    plt.ylabel('$\\frac{\u0394L_{v}}{L_{v}(Ref)}$')
+    plt.title('Different y-axis scale - Convergence testing for L_v')
+    plt.legend(loc = 'best')
 
-    # plt.figure()
-    # plt.plot(log_bins, total_ratios)
-    # plt.plot(log_bins, [1,1,1,1,1]) #This represents the reference spectrum of 10000 bins
-    # plt.ylim(0.99994, 1.00001)
-    # plt.xlabel('$log_{10}$(No of bins)')
-    # plt.ylabel('$\\frac{Total L}{Total L(Ref)}$')
-    # plt.title('Convergence testing for Total L')
-
-    # spectrum_fixed_v = []
-    # for bins in bins_test:
-    #     l_v, my_integrands = L_v(r_in, r_out, 1e17, M, M_dot, bins) #1e17 is ref v
-    #     spectrum_fixed_v.append(l_v)
-
-    # fixed_vs = [1e14, 1e15, 1e16, 1e17, 1e18, 1e19]
-
-    # spectrum_fixed_v = np.array(spectrum_fixed_v)
-    # for v in fixed_vs:
-    #     fixed_v_list = []
-    #     for bins in bins_test:
-    #         l_v, my_integrands = L_v(r_in, r_out, v, M, M_dot, bins)
-    #         fixed_v_list.append(l_v)
-    #     spectrum_fixed_v = np.vstack((spectrum_fixed_v, fixed_v_list))
-
-    # normalised_spectrum_fixed_v = spectrum_fixed_v/spectrum_fixed_v[0, :]
-
-    # plt.figure()
-    # counter = -1
-    # for row in normalised_spectrum_fixed_v:
-    #     if counter == -1:
-    #         plt.plot(log_bins, row, label = "Reference Spectrum - 1e17 Hz")
-    #     else:
-    #         plt.plot(log_bins, row, label = f"{fixed_vs[counter]:e} Hz")
-    #     counter += 1
-
-    # plt.xlabel('$log_{10}$(No of bins)')
-    # plt.ylabel('$\\frac{L_{v}}{L_{v}(Ref)}$')
-    # plt.title('Convergence testing for L_v (varying v)')
-    # plt.legend(loc = 'best')
+    # L_Tot/L_Tot(ref) vs log(number of bins)
+    plt.figure()
+    plt.plot(log_bins, total_ratios)
+    plt.plot(log_bins, [1,1,1,1,1]) #This represents the reference spectrum of 10000 bins
+    plt.xlabel('$log_{10}$(No of bins)')
+    plt.ylabel('$\\frac{L_{Tot}}{L_{Tot}(Ref)}$')
+    plt.title('Convergence testing for Total L')
 
     end = time.time()
     print(end - start)
 
     return plt.show()
 
-#What have I done wrong with the L_v/L_v(Ref) plot?
+#Fixed_vs is a list of fixed v values. Eg: fixed_vs = [1e14, 1e15, 1e16, 1e17, 1e18, 1e19]
+def convergence_check_fixed_v(r_in, r_out, fixed_vs, M, M_dot):
+    bins_test = [25, 100, 250, 500, 750, 1000]
+    log_bins = np.log10(bins_test)
+    
+    spectrum_fixed_v = []
+    for v in fixed_vs:
+        my_list = []
+        l_v_ref, my_integrands = L_v(r_in, r_out, v, M, M_dot, 5000) #These are reference parameters
+        for bins in bins_test:
+            l_v, my_integrands = L_v(r_in, r_out, v, M, M_dot, bins)
+            my_list.append(l_v/l_v_ref)
+        spectrum_fixed_v.append(my_list)
+
+    plt.figure()
+    plt.plot(log_bins, [1, 1, 1, 1, 1, 1], label = 'Line representing convergence - 1')
+    for i, L_list in enumerate(spectrum_fixed_v):
+        plt.plot(log_bins, L_list, label = f"{fixed_vs[i]:.1e} Hz")
+
+    plt.xlabel('$log_{10}$(No of bins)')
+    plt.ylabel('$\\frac{L_{v}}{L_{v}(Ref)}$')
+    plt.title('Convergence testing for L_v (varying v)')
+    plt.legend(loc = 'best')
+    return plt.show()
 
 #r_ins is a list of varying r_in values
 def spectrum_vary_rin(r_ins, r_out, v_start, v_fin, M, M_dot, bins):
@@ -361,6 +348,7 @@ def spectrum_vary_Mdot(r_in, r_out, v_start, v_fin, M, M_dots, bins):
     return plt.show()
 
 def T_visc_vary_Mdot(r_in, r_out, M, M_dots, bins):
+    
     Rs = np.logspace(np.log10(r_in), np.log10(r_out), bins)
     for M_dot in M_dots:
         new_Rs = []
