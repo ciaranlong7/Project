@@ -10,6 +10,8 @@ S_B_constant = 5.670374419e-8
 c = 299792458
 h = 6.62607015e-34
 k = 1.380649e-23
+m_p = 1.67262192e-27
+sigma_T = 6.6524587321e-29
 def R_g(M):
     return (G*(M*M_sun))/(c**2)
 
@@ -365,3 +367,6 @@ def T_visc_vary_Mdot(r_in, r_out, M, M_dots, bins):
     plt.legend(loc = 'best')
     
     return plt.show()
+
+def L_edd(M):
+    return (4*np.pi*G*(M*M_sun)*m_p*c)/sigma_T
