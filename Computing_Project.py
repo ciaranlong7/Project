@@ -124,11 +124,10 @@ def spectrum(r_in, r_out, v_start, v_fin, M, M_dot, bins): #Note, same bins for 
         l_v, my_integrands = L_v(r_in, r_out, v, M, M_dot, bins) # R_g units
         spectrum.append(l_v)
         log_vl_v.append(np.log10(v*l_v))
-    
     return spectrum, vs, log_vs, log_vl_v
 
-def plot_spectrum():
-    spec, vs, log_vs, log_vl_v = spectrum(6, 10**5, 1e14, 1e19, 10, 10**15, 1000)
+def plot_spectrum(r_in, r_out, v_start, v_fin, M, M_dot, bins):
+    spec, vs, log_vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, bins)
     plt.plot(log_vs, log_vl_v)
     # plt.tick_params(axis='both', color = 'white')
     plt.xlabel('$log_{10}$($\\nu$ / Hz)')
@@ -209,33 +208,33 @@ def convergence_check(r_in, r_out, v_start, v_fin, v_steps, M, M_dot):
     plt.title('Convergence testing for L_v')
     plt.legend(loc = 'best')
     
-    # Delta L y axis
-    total_ratios = []
-    norm_delta_Ls = np.array([0]*len(ref_spectrum))
-    for bins in bins_test:
-        norm_delta_L = []
-        my_list = []
-        for i in range(len(vs)):
-            l_v, my_integrands = L_v(r_in, r_out, vs[i], M, M_dot, bins)
-            my_list.append(l_v)
-            norm_delta_L.append((l_v-ref_spectrum[i])/ref_spectrum[i])
-        tot = trapezoid(my_list, x=vs)
-        total_ratios.append(tot/ref_tot)
-        norm_delta_Ls  = np.vstack((norm_delta_Ls, norm_delta_L))
+    # # Delta L y axis
+    # total_ratios = []
+    # norm_delta_Ls = np.array([0]*len(ref_spectrum))
+    # for bins in bins_test:
+    #     norm_delta_L = []
+    #     my_list = []
+    #     for i in range(len(vs)):
+    #         l_v, my_integrands = L_v(r_in, r_out, vs[i], M, M_dot, bins)
+    #         my_list.append(l_v)
+    #         norm_delta_L.append((l_v-ref_spectrum[i])/ref_spectrum[i])
+    #     tot = trapezoid(my_list, x=vs)
+    #     total_ratios.append(tot/ref_tot)
+    #     norm_delta_Ls  = np.vstack((norm_delta_Ls, norm_delta_L))
         
-    plt.figure()
-    counter = -1
-    for row in norm_delta_Ls:
-        if counter == -1:
-            plt.plot(log_vs, row, label = "Reference Spectrum - 10000 bins")
-        else:
-            plt.plot(log_vs, row, label = f"{bins_test[counter]} bins")
-        counter += 1
+    # plt.figure()
+    # counter = -1
+    # for row in norm_delta_Ls:
+    #     if counter == -1:
+    #         plt.plot(log_vs, row, label = "Reference Spectrum - 10000 bins")
+    #     else:
+    #         plt.plot(log_vs, row, label = f"{bins_test[counter]} bins")
+    #     counter += 1
     
-    plt.xlabel('$log_{10}$($\\nu$ / Hz)')
-    plt.ylabel('$\\frac{\u0394L_{v}}{L_{v}(Ref)}$')
-    plt.title('Different y-axis scale - Convergence testing for L_v')
-    plt.legend(loc = 'best')
+    # plt.xlabel('$log_{10}$($\\nu$ / Hz)')
+    # plt.ylabel('$\\frac{\u0394L_{v}}{L_{v}(Ref)}$')
+    # plt.title('Different y-axis scale - Convergence testing for L_v')
+    # plt.legend(loc = 'best')
 
     # L_Tot/L_Tot(ref) vs log(number of bins)
     plt.figure()
@@ -350,7 +349,6 @@ def spectrum_vary_Mdot(r_in, r_out, v_start, v_fin, M, M_dots, bins):
     return plt.show()
 
 def T_visc_vary_Mdot(r_in, r_out, M, M_dots, bins):
-    
     Rs = np.logspace(np.log10(r_in), np.log10(r_out), bins)
     for M_dot in M_dots:
         new_Rs = []
@@ -370,3 +368,17 @@ def T_visc_vary_Mdot(r_in, r_out, M, M_dots, bins):
 
 def L_edd(M):
     return (4*np.pi*G*(M*M_sun)*m_p*c)/sigma_T
+
+def spectrum_edd_vary_M(r_in, r_out, v_start, v_fin, Ms, eta, bins):
+    for M in Ms:
+        M_dot = L_edd(M)/(eta*(c)**2)
+        spec, vs, log_vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, bins)
+        tot = trapezoid(spec, x=vs)
+        plt.plot(log_vs, [x/1e13 for x in spec], label = f"M = {M}$M_{{sun}}$, $L_{{Edd}}$ = {tot:.1e}W")
+
+    plt.xlabel('$log_{10}$($\\nu$ / Hz)')
+    plt.ylabel('$L_{v}$ / $10^{13}$W')
+    plt.title(f'Spectrum of Eddington limited accretion disk (vary M, \u03B7={eta})')
+    plt.legend(loc = 'best')
+    
+    return plt.show()
