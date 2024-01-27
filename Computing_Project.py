@@ -113,21 +113,21 @@ def L_v(r_in, r_out, v, M, M_dot, bins):
     return l_v, my_integrands
 
 #spectrum is luminosity spectrum (luminosity at all frequencies in 10^14 - 10^19 range)
-def spectrum(r_in, r_out, v_start, v_fin, M, M_dot, bins): #Note, same bins for logspacing v and L_v as easier. May not want this though.
+def spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins):
     spectrum = []
     log_vl_v = []
     
-    vs = np.logspace(np.log10(v_start), np.log10(v_fin), bins)
-    log_vs = np.log10(vs)
+    vs = np.logspace(np.log10(v_start), np.log10(v_fin), v_steps)
     
     for v in vs:
         l_v, my_integrands = L_v(r_in, r_out, v, M, M_dot, bins) # R_g units
         spectrum.append(l_v)
         log_vl_v.append(np.log10(v*l_v))
-    return spectrum, vs, log_vs, log_vl_v
+    return spectrum, vs, log_vl_v
 
-def plot_spectrum(r_in, r_out, v_start, v_fin, M, M_dot, bins):
-    spec, vs, log_vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, bins)
+def plot_spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins):
+    spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins)
+    log_vs = np.log10(vs)
     plt.plot(log_vs, log_vl_v)
     # plt.tick_params(axis='both', color = 'white')
     plt.xlabel('$log_{10}$($\\nu$ / Hz)')
@@ -275,9 +275,10 @@ def convergence_check_fixed_v(r_in, r_out, fixed_vs, M, M_dot):
     return plt.show()
 
 #r_ins is a list of varying r_in values
-def spectrum_vary_rin(r_ins, r_out, v_start, v_fin, M, M_dot, bins):
+def spectrum_vary_rin(r_ins, r_out, v_start, v_fin, M, M_dot, v_steps, bins):
     for r_in in r_ins:
-        spec, vs, log_vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, bins) #r_out constant. Usually at 10^5 R_g
+        spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins) #r_out constant. Usually at 10^5 R_g
+        log_vs = np.log(vs)
         tot = trapezoid(spec, x=vs)
         plt.plot(log_vs, spec, label = f"$r_{{in}}$ = {r_in}$R_{{g}}$, $L_{{Tot}}$ = {tot:.1e}W")
     
@@ -306,9 +307,10 @@ def T_visc_vary_rin(r_ins, r_out, M, M_dot, bins):
     return plt.show()
 
 #Ms is a list of varying M values
-def spectrum_vary_M(r_in, r_out, v_start, v_fin, Ms, M_dot, bins):
+def spectrum_vary_M(r_in, r_out, v_start, v_fin, Ms, M_dot, v_steps, bins):
     for M in Ms:
-        spec, vs, log_vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, bins)
+        spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins)
+        log_vs = np.log10(vs)
         tot = trapezoid(spec, x=vs)
         plt.plot(log_vs, spec, label = f"M = {M}$M_{{sun}}$, $L_{{Tot}}$ = {tot:.1e}W")
 
@@ -336,9 +338,10 @@ def T_visc_vary_M(r_in, r_out, Ms, M_dot, bins):
     
     return plt.show()
 
-def spectrum_vary_Mdot(r_in, r_out, v_start, v_fin, M, M_dots, bins):
+def spectrum_vary_Mdot(r_in, r_out, v_start, v_fin, M, M_dots, v_steps, bins):
     for M_dot in M_dots:
-        spec, vs, log_vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, bins)
+        spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins)
+        log_vs = np.log10(vs)
         tot = trapezoid(spec, x=vs)
         plt.plot(log_vs, spec, label = f"$M_{{dot}}$ = {M_dot:.1e} Kg$s^{{-1}}$, $L_{{Tot}}$ = {tot:.1e}W")
 
@@ -369,10 +372,11 @@ def T_visc_vary_Mdot(r_in, r_out, M, M_dots, bins):
 def L_edd(M):
     return (4*np.pi*G*(M*M_sun)*m_p*c)/sigma_T
 
-def spectrum_edd_vary_M(r_in, r_out, v_start, v_fin, Ms, eta, bins):
+def spectrum_edd_vary_M(r_in, r_out, v_start, v_fin, Ms, eta, v_steps, bins):
     for M in Ms:
         M_dot = L_edd(M)/(eta*(c)**2)
-        spec, vs, log_vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, bins)
+        spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins)
+        log_vs = np.log10(vs)
         tot = trapezoid(spec, x=vs)
         plt.plot(log_vs, [x/1e13 for x in spec], label = f"M = {M}$M_{{sun}}$, $L_{{Edd}}$ = {tot:.1e}W")
 
@@ -381,4 +385,48 @@ def spectrum_edd_vary_M(r_in, r_out, v_start, v_fin, Ms, eta, bins):
     plt.title(f'Spectrum of Eddington limited accretion disk (vary M, \u03B7={eta})')
     plt.legend(loc = 'best')
     
+    return plt.show()
+
+def convergence_test_spec_edd(r_in, r_out, v_start, v_fin, Ms, eta, v_steps, ref_bins):
+    start = time.time()
+    bins_test = [500, 1000, 2000, 5000, 20000]
+    log_bins = np.log10(bins_test)
+    
+    for M in Ms:
+        M_dot = L_edd(M)/(eta*(c)**2)
+        ref_spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, ref_bins)
+        log_vs = np.log10(vs)
+        ref_tot = trapezoid(ref_spec, x=vs)
+        total_ratios = []
+        all_spectrums = np.array(ref_spec)
+        for bins in bins_test:
+            spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins) 
+            tot = trapezoid(spec, x=vs)
+            total_ratios.append(tot/ref_tot)
+            all_spectrums = np.vstack((all_spectrums, spec))
+        normalised_spectrums = all_spectrums/all_spectrums[0, :]
+        plt.figure()
+        counter = -1
+        for row in normalised_spectrums:
+            if counter == -1:
+                plt.plot(log_vs, row, label = f"Reference Spectrum - {ref_bins} bins")
+            else:
+                plt.plot(log_vs, row, label = f"{bins_test[counter]} bins")
+            counter += 1
+
+        plt.xlabel('$log_{10}$($\\nu$ / Hz)')
+        plt.ylabel('$\\frac{L_{v}}{L_{v}(Ref)}$')
+        plt.title(f'Convergence testing for spectrum, M={M}$M_{{Sun}}$, \u03B7={eta}')
+        plt.legend(loc = 'best')
+    
+        plt.figure()
+        plt.plot(log_bins, total_ratios)
+        plt.plot(log_bins, [1,1,1,1,1]) #This represents the reference spectrum of 10000 bins
+        plt.xlabel('$log_{10}$(No of bins)')
+        plt.ylabel('$\\frac{L_{Tot}}{L_{Tot}(Ref)}$')
+        plt.title(f'Convergence testing for $L_{{Tot}}$, M={M}$M_{{Sun}}$, \u03B7={eta}')
+
+    end = time.time()
+    print(end - start)
+
     return plt.show()
