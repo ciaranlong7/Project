@@ -23,19 +23,105 @@ def T(r, M, M_dot):
 #Reason for warning - When I define Rs, the first R value is slightly smaller than the original r_in value
 #This leads to r_in/R > 1 and hence fn is negative and (fn)**(1/4) gives an 'invalid value'
 def T_visc(r, r_in, M, M_dot):
-    return (((3*G*(M*M_sun)*M_dot)/(8*np.pi*((r**3)*((R_g(M))**3))*S_B_constant))*(1-((r_in/(r))**(1/2))))**(1/4)
+    return (((3*G*(M*M_sun)*M_dot)/(8*np.pi*(((r*R_g(M))**3))*S_B_constant))*(1-((r_in/(r))**(1/2))))**(1/4)
 
-def T_vs_R(r_in, r_out, M, M_dot, bins):
+#New Temperature - GR:
+
+def z_1(a_star):
+    return 1 + ((1-a_star**2)**(1/3))*((1+a_star)**(1/3)+(1-a_star)**(1/3))
+
+def z_2(a_star):
+    return (3*(a_star**2)+(z_1(a_star))**2)**(1/2)
+
+def r_ms_prograde(a_star):
+    return 3 + z_2(a_star) - ((3-z_1(a_star))*(3+z_1(a_star)+2*z_2(a_star)))**(1/2)
+
+def r_ms_retrograde(a_star):
+    return 3 + z_2(a_star) + ((3-z_1(a_star))*(3+z_1(a_star)+2*z_2(a_star)))**(1/2)
+
+def plot_rms():
+    retro_a_stars = np.linspace(-1, 0, 101)
+    pro_a_stars = np.linspace(0.01, 1, 100)
+    r_ms_values = []
+    for a_star in retro_a_stars:
+        r_ms_values.append(r_ms_retrograde(a_star))
+    for a_star in pro_a_stars:
+        r_ms_values.append(r_ms_prograde(a_star))
+
+    comb_a_stars = np.linspace(-1, 1, 201)
+
+    plt.plot(comb_a_stars, r_ms_values)
+    plt.xlabel('$a_{*}$ / ?')
+    plt.ylabel('$r_{ms}$ / ${R_{g}}$')
+    plt.title('How $r_{ms}$ varies with spin parameter $a_{*}$')
+    return plt.show()
+
+def y_ms_prograde(a_star):
+    return (r_ms_prograde(a_star))**(1/2)
+
+def y_ms_retrograde(a_star):
+    return (r_ms_retrograde(a_star))**(1/2)
+
+def y(r, M):
+    return (r)**(1/2)
+
+def y_1(a_star):
+    return 2*np.cos((np.arccos(a_star) - np.pi)/3)
+
+def y_2(a_star):
+    return 2*np.cos((np.arccos(a_star) + np.pi)/3)
+
+def y_3(a_star):
+    return -2*np.cos((np.arccos(a_star))/3)
+
+def A_prograde(a_star, r, M):
+    return 1 - (y_ms_prograde(a_star)/y(r, M)) - (3*(a_star)*np.log(((y(r, M))/(y_ms_prograde(a_star)))))/(2*y(r, M))
+
+def A_retrograde(a_star, r, M):
+    return 1 - (y_ms_retrograde(a_star)/y(r, M)) - (3*(a_star)*np.log((y(r, M))/(y_ms_retrograde(a_star))))/(2*y(r, M))
+
+def B_prograde(a_star, r, M):
+    result = ((3*((y_1(a_star) - a_star)**2))*np.log(((y(r, M) - y_1(a_star))/(y_ms_prograde(a_star) - y_1(a_star)))))/(y(r, M)*y_1(a_star)*(y_1(a_star)-y_2(a_star))*(y_1(a_star)-y_3(a_star))) \
+    + ((3*((y_2(a_star) - a_star)**2))*np.log(((y(r, M) - y_2(a_star))/(y_ms_prograde(a_star) - y_2(a_star)))))/(y(r, M)*y_2(a_star)*(y_2(a_star)-y_1(a_star))*(y_2(a_star)-y_3(a_star))) \
+    + ((3*((y_3(a_star) - a_star)**2))*np.log(((y(r, M) - y_3(a_star))/(y_ms_prograde(a_star) - y_3(a_star)))))/(y(r, M)*y_3(a_star)*(y_3(a_star)-y_1(a_star))*(y_3(a_star)-y_2(a_star)))
+    return result
+
+def B_retrograde(a_star, r, M):
+    result = ((3*((y_1(a_star) - a_star)**2))*np.log(((y(r, M) - y_1(a_star))/(y_ms_retrograde(a_star) - y_1(a_star)))))/(y(r, M)*y_1(a_star)*(y_1(a_star)-y_2(a_star))*(y_1(a_star)-y_3(a_star))) \
+    + ((3*((y_2(a_star) - a_star)**2))*np.log(((y(r, M) - y_2(a_star))/(y_ms_retrograde(a_star) - y_2(a_star)))))/(y(r, M)*y_2(a_star)*(y_2(a_star)-y_1(a_star))*(y_2(a_star)-y_3(a_star))) \
+    + ((3*((y_3(a_star) - a_star)**2))*np.log(((y(r, M) - y_3(a_star))/(y_ms_retrograde(a_star) - y_3(a_star)))))/(y(r, M)*y_3(a_star)*(y_3(a_star)-y_1(a_star))*(y_3(a_star)-y_2(a_star)))
+    return result
+
+def C(a_star, r):
+    return 1 - (3/r) + ((2*a_star)/(r**(3/2)))
+
+def T_GR_prograde(r, M, M_dot, a_star):
+    return (((3*G*(M*M_sun)*M_dot)/(8*np.pi*((r*R_g(M))**3)*S_B_constant))*((A_prograde(a_star, r, M)-B_prograde(a_star, r, M))/C(a_star, r)))**(1/4)
+
+def T_GR_retrograde(r, M, M_dot, a_star):
+    return (((3*G*(M*M_sun)*M_dot)/(8*np.pi*((r*R_g(M))**3)*S_B_constant))*((A_retrograde(a_star, r, M)-B_retrograde(a_star, r, M))/C(a_star, r)))**(1/4)
+                                                                                                            
+def T_vs_R(r_out, M, M_dot, bins, a_star):
+    if a_star >= 0:
+        r_in = r_ms_prograde(a_star)
+    else:
+        r_in = r_ms_retrograde(a_star)
     Rs = np.logspace(np.log10(r_in), np.log10(r_out), bins)
     new_Rs = []
     Ts = []
     Ts_visc = []
+    Ts_GR = []
     for i in range(len(Rs)-1):
         midpoint_r = (Rs[i+1] + Rs[i])/2
         new_Rs.append(midpoint_r)
         Ts.append(T(midpoint_r, M, M_dot)) #divide by 1e6 to scale if desired
         Ts_visc.append(T_visc(midpoint_r, r_in, M, M_dot))
-    return Ts, Ts_visc, new_Rs
+        if a_star >= 0:
+            Ts_GR.append(T_GR_prograde(midpoint_r, M, M_dot, a_star))
+        else:
+            Ts_GR.append(T_GR_retrograde(midpoint_r, M, M_dot, a_star))
+
+    return Ts, Ts_visc, Ts_GR, new_Rs
 
 #Defining luminosity per unit frequency per unit area
 #Throwing up warning - RuntimeWarning: overflow encountered in exp
@@ -45,12 +131,12 @@ def F_v(T, v):
     return ((2*np.pi*h*(v**3)/(c**2))/(np.exp((h*v)/(k*T))-1))
 
 #Plot f_v as a fn of T for multiple different vs.
-def plot_f_v(r_in, r_out, M, M_dot, bins):
+def plot_f_v(r_in, r_out, M, M_dot, bins, a_star):
     #The following two lists must be the same length. If they aren't tweak first for loop below
     small_vs = [1e14, 1e15, 1e16]
     large_vs = [1e17, 1e18, 1e19]
 
-    Ts, Ts_visc, new_Rs = T_vs_R(r_in, r_out, M, M_dot, bins)
+    Ts, Ts_visc, Ts_GR, new_Rs = T_vs_R(r_out, M, M_dot, bins, a_star)
         
     new_Ts = np.linspace(min(Ts_visc), max(Ts_visc), bins)
     
@@ -144,18 +230,19 @@ def plot_spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins):
     return plt.show()
 
 #Plotting the difference between T and T_visc
-def T_vs_T_visc(r_in, r_out, M, M_dot, bins):
+def plot_T_vs_T_visc(r_in, r_out, M, M_dot, bins, a_star):
 
-    Ts, Ts_visc, new_Rs = T_vs_R(r_in, r_out, M, M_dot, bins)
+    Ts, Ts_visc, Ts_GR, new_Rs = T_vs_R(r_out, M, M_dot, bins, a_star)
     
-    plt.plot(np.log10(new_Rs), Ts, label = 'No viscous forces considered')
-    plt.plot(np.log10(new_Rs), Ts_visc, label = 'Viscous forces considered')
+    plt.plot(np.log10(new_Rs), Ts, label = 'Newton - Non viscous')
+    plt.plot(np.log10(new_Rs), Ts_visc, label = 'Newton - Viscous')
+    plt.plot(np.log10(new_Rs), Ts_GR, label = 'General Relativitiy')
     # plt.tick_params(axis='both', color = 'white')
-    plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)')
-    plt.ylabel('T(R) / $10^6$K')
+    plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)', fontsize = 16)
+    plt.ylabel('T(R) / $10^{6}$K', fontsize = 16)
     # plt.xticks(color = 'white', fontsize = 12)
     # plt.yticks(color = 'white', fontsize = 12)
-    plt.title('Temperature as a function of $log_{10}$(Radius)')
+    plt.title('Temperature as a function of $log_{10}$(Radius)', fontsize = 14)
     plt.legend(loc = 'upper right')
     
     print("Max temperature with viscous forces considered:")
@@ -278,13 +365,13 @@ def convergence_check_fixed_v(r_in, r_out, fixed_vs, M, M_dot):
 def spectrum_vary_rin(r_ins, r_out, v_start, v_fin, M, M_dot, v_steps, bins):
     for r_in in r_ins:
         spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins) #r_out constant. Usually at 10^5 R_g
-        log_vs = np.log(vs)
+        log_vs = np.log10(vs)
         tot = trapezoid(spec, x=vs)
         plt.plot(log_vs, spec, label = f"$r_{{in}}$ = {r_in}$R_{{g}}$, $L_{{Tot}}$ = {tot:.1e}W")
-    
-    plt.xlabel('$log_{10}$($\\nu$ / Hz)')
-    plt.ylabel('$L_{v}$ / W')
-    plt.title('Spectrum across $10^{14}$ - $10^{19}$ Hz with varying r_in')
+
+    plt.xlabel('$log_{10}$($\\nu$ / Hz)', fontsize = 14)
+    plt.ylabel('$L_{v}$ / W', fontsize = 14)
+    plt.title(f'Luminosity Spectrum - vary $r_{{in}}$')
     plt.legend(loc = 'best')
     return plt.show()
 
@@ -301,7 +388,7 @@ def T_visc_vary_rin(r_ins, r_out, M, M_dot, bins):
     
     plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)')
     plt.ylabel('T(R) / $10^6$K')
-    plt.title('Viscous forces temp as a function of $log_{10}$(R) with varying r_in')
+    plt.title('Viscous forces temp as a function of $log_{10}$(R) with varying $R_{in}$')
     plt.legend(loc = 'best')
     
     return plt.show()
@@ -314,12 +401,12 @@ def spectrum_vary_M(r_in, r_out, v_start, v_fin, Ms, M_dot, v_steps, bins):
         tot = trapezoid(spec, x=vs)
         plt.plot(log_vs, spec, label = f"M = {M}$M_{{sun}}$, $L_{{Tot}}$ = {tot:.1e}W")
 
-    plt.xlabel('$log_{10}$($\\nu$ / Hz)')
-    plt.ylabel('$L_{v}$ / W')
-    plt.title('Spectrum across $10^{14}$ - $10^{19}$ Hz with varying M')
+    plt.xlabel('$log_{10}$($\\nu$ / Hz)', fontsize = 14)
+    plt.ylabel('$L_{v}$ / W', fontsize = 14)
+    plt.title(f'Luminosity Spectrum with varying M, $r_{{in}}$={r_in}$R_{{g}}$, $\dot{{M}}$={M_dot:.1e}kg$s^{{-1}}$', fontsize = 9)
     plt.legend(loc = 'best')
     return plt.show()
-
+    
 def T_visc_vary_M(r_in, r_out, Ms, M_dot, bins):
     Rs = np.logspace(np.log10(r_in), np.log10(r_out), bins)
     for M in Ms:
@@ -345,9 +432,9 @@ def spectrum_vary_Mdot(r_in, r_out, v_start, v_fin, M, M_dots, v_steps, bins):
         tot = trapezoid(spec, x=vs)
         plt.plot(log_vs, spec, label = f"$M_{{dot}}$ = {M_dot:.1e} Kg$s^{{-1}}$, $L_{{Tot}}$ = {tot:.1e}W")
 
-    plt.xlabel('$log_{10}$($\\nu$ / Hz)')
-    plt.ylabel('$L_{v}$ / W')
-    plt.title('Spectrum across $10^{14}$ - $10^{19}$ Hz with varying $\dot{M}$')
+    plt.xlabel('$log_{10}$($\\nu$ / Hz)', fontsize = 14)
+    plt.ylabel('$L_{v}$ / W', fontsize = 14)
+    plt.title(f'Luminosity Spectrum - vary $\dot{{M}}$')
     plt.legend(loc = 'best')
     return plt.show()
 
@@ -380,9 +467,9 @@ def spectrum_edd_vary_M(r_in, r_out, v_start, v_fin, Ms, eta, v_steps, bins):
         tot = trapezoid(spec, x=vs)
         plt.plot(log_vs, [x/1e13 for x in spec], label = f"M = {M}$M_{{sun}}$, $L_{{Edd}}$ = {tot:.1e}W")
 
-    plt.xlabel('$log_{10}$($\\nu$ / Hz)')
-    plt.ylabel('$L_{v}$ / $10^{13}$W')
-    plt.title(f'Spectrum of Eddington limited accretion disk (vary M, \u03B7={eta})')
+    plt.xlabel('$log_{10}$($\\nu$ / Hz)', fontsize = 14)
+    plt.ylabel('$L_{v}$ / $10^{13}$W', fontsize = 14)
+    plt.title('Luminosity Spectrum of Eddington limited accretion disk - vary M')
     plt.legend(loc = 'best')
     
     return plt.show()
@@ -390,19 +477,19 @@ def spectrum_edd_vary_M(r_in, r_out, v_start, v_fin, Ms, eta, v_steps, bins):
 def convergence_test_spec_edd(r_in, r_out, v_start, v_fin, Ms, eta, v_steps, ref_bins):
     start = time.time()
     bins_test = [500, 1000, 2000, 5000, 20000]
-    log_bins = np.log10(bins_test)
+    #log_bins = np.log10(bins_test)
     
     for M in Ms:
         M_dot = L_edd(M)/(eta*(c)**2)
         ref_spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, ref_bins)
         log_vs = np.log10(vs)
         ref_tot = trapezoid(ref_spec, x=vs)
-        total_ratios = []
+       # total_ratios = []
         all_spectrums = np.array(ref_spec)
         for bins in bins_test:
             spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins) 
             tot = trapezoid(spec, x=vs)
-            total_ratios.append(tot/ref_tot)
+           # total_ratios.append(tot/ref_tot)
             all_spectrums = np.vstack((all_spectrums, spec))
         normalised_spectrums = all_spectrums/all_spectrums[0, :]
         plt.figure()
@@ -419,12 +506,12 @@ def convergence_test_spec_edd(r_in, r_out, v_start, v_fin, Ms, eta, v_steps, ref
         plt.title(f'Convergence testing for spectrum, M={M}$M_{{Sun}}$, \u03B7={eta}')
         plt.legend(loc = 'best')
     
-        plt.figure()
-        plt.plot(log_bins, total_ratios)
-        plt.plot(log_bins, [1,1,1,1,1]) #This represents the reference spectrum of 10000 bins
-        plt.xlabel('$log_{10}$(No of bins)')
-        plt.ylabel('$\\frac{L_{Tot}}{L_{Tot}(Ref)}$')
-        plt.title(f'Convergence testing for $L_{{Tot}}$, M={M}$M_{{Sun}}$, \u03B7={eta}')
+        # plt.figure()
+        # plt.plot(log_bins, total_ratios)
+        # plt.plot(log_bins, [1,1,1,1,1]) #This represents the reference spectrum of 10000 bins
+        # plt.xlabel('$log_{10}$(No of bins)')
+        # plt.ylabel('$\\frac{L_{Tot}}{L_{Tot}(Ref)}$')
+        # plt.title(f'Convergence testing for $L_{{Tot}}$, M={M}$M_{{Sun}}$, \u03B7={eta}')
 
     end = time.time()
     print(end - start)
