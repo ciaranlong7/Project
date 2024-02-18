@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import trapezoid
 import time
+import random
 
 #Defining Variables (Must reference these values in my report)
 G = 6.6743e-11
@@ -18,15 +19,10 @@ def R_g(M):
 def T(r, M, M_dot):
     return ((G*(M*M_sun)*M_dot)/(8*np.pi*((r*R_g(M))**3)*S_B_constant))**(1/4)
 
-#Taking viscous forces into account
-#Used to throw up warning - RuntimeWarning: invalid value encountered in double_scalars
-#Reason for warning - When I define Rs, the first R value is slightly smaller than the original r_in value
-#This leads to r_in/R > 1 and hence fn is negative and (fn)**(1/4) gives an 'invalid value'
 def T_visc(r, r_in, M, M_dot):
     return (((3*G*(M*M_sun)*M_dot)/(8*np.pi*(((r*R_g(M))**3))*S_B_constant))*(1-((r_in/(r))**(1/2))))**(1/4)
 
-#New Temperature - GR:
-
+#GR Temperature:
 def z_1(a_star):
     return 1 + ((1-a_star**2)**(1/3))*((1+a_star)**(1/3)+(1-a_star)**(1/3))
 
@@ -115,18 +111,49 @@ def T_vs_R(r_out, M, M_dot, bins, a_star):
         midpoint_r = (Rs[i+1] + Rs[i])/2
         new_Rs.append(midpoint_r)
         Ts.append(T(midpoint_r, M, M_dot)) #divide by 1e6 to scale if desired
-        Ts_visc.append(T_visc(midpoint_r, r_in, M, M_dot))
+        Ts_visc.append(T_visc(midpoint_r, r_in, M, M_dot)/1e6)
         if a_star >= 0:
-            Ts_GR.append(T_GR_prograde(midpoint_r, M, M_dot, a_star))
+            Ts_GR.append(T_GR_prograde(midpoint_r, M, M_dot, a_star)/1e6)
         else:
-            Ts_GR.append(T_GR_retrograde(midpoint_r, M, M_dot, a_star))
+            Ts_GR.append(T_GR_retrograde(midpoint_r, M, M_dot, a_star)/1e6)
 
     return Ts, Ts_visc, Ts_GR, new_Rs
 
+def plot_compare_Ts(r_out, M, M_dot, bins, a_star):
+
+    Ts, Ts_visc, Ts_GR, new_Rs = T_vs_R(r_out, M, M_dot, bins, a_star)
+    
+    plt.plot(np.log10(new_Rs), Ts, label = 'Newton - Non viscous')
+    plt.plot(np.log10(new_Rs), Ts_visc, label = 'Newton - Viscous')
+    plt.plot(np.log10(new_Rs), Ts_GR, label = 'General Relativitiy')
+    # plt.tick_params(axis='both', color = 'white')
+    plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)', fontsize = 16)
+    plt.ylabel('T(R) / $10^{6}$K', fontsize = 16)
+    # plt.xticks(color = 'white', fontsize = 12)
+    # plt.yticks(color = 'white', fontsize = 12)
+    plt.title('Temperature as a function of $log_{10}$(Radius)', fontsize = 14)
+    plt.legend(loc = 'upper right')
+    
+    print("Max temperature with viscous forces considered:")
+    print(f"{max(Ts_visc):.2e} K")
+    
+    return plt.show()
+
+def plot_Ts_vary_a_star(r_out, M, M_dot, bins, a_stars):
+    for a_star in a_stars:
+        random_color = [random.random() for _ in range(3)]
+        Ts, Ts_visc, Ts_GR, new_Rs = T_vs_R(r_out, M, M_dot, bins, a_star)
+        plt.plot(np.log10(new_Rs), Ts_visc, linestyle='--', color = random_color, label = f'Newtonian Temperature, $a_{{*}}$={a_star}')
+        plt.plot(np.log10(new_Rs), Ts_GR, color = random_color, label = f'GR Temperature, $a_{{*}}$={a_star}')
+
+    plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)', fontsize = 16)
+    plt.ylabel('T(R) / $10^{6}$K', fontsize = 16)
+    plt.title('Temperature as a function of $log_{10}$(Radius)', fontsize = 14)
+    plt.legend(loc = 'upper right')
+
+    return plt.show()
+
 #Defining luminosity per unit frequency per unit area
-#Throwing up warning - RuntimeWarning: overflow encountered in exp
-#It's ok to ignore this warning (still performs calculation, just takes time to do).
-#See https://www.statology.org/runtimewarning-overflow-encountered-in-exp
 def F_v(T, v):
     return ((2*np.pi*h*(v**3)/(c**2))/(np.exp((h*v)/(k*T))-1))
 
@@ -150,8 +177,6 @@ def plot_f_v(r_in, r_out, M, M_dot, bins, a_star):
         for T in new_Ts:
             smallf_v = F_v(T, small_vs[i])
             largef_v = F_v(T, large_vs[i])
-            #Get the following warning - RuntimeWarning: divide by zero encountered in log10
-            #Caused by taking log10 of a very small f_v value. Computer treats this as taking log10(0)
             small_list.append(np.log10(smallf_v))
             large_list.append(np.log10(largef_v))
         smallf_vs.append(small_list)
@@ -171,7 +196,7 @@ def plot_f_v(r_in, r_out, M, M_dot, bins, a_star):
     ax2.legend(loc = 'best')
     return plt.show()
 
-#Now need to calculate integral. To do this, I must first calculate the integrand of eq 8.3
+#Now need to calculate integral. To do this, I must first calculate the integrand of eqn 8.3
 #I can then evaluate the integral using the trapezium rule.
 def integrand(r, r_in, v, M, M_dot):
     t = T_visc(r, r_in, M, M_dot) #Change to T to ignore viscous forces
@@ -198,7 +223,7 @@ def L_v(r_in, r_out, v, M, M_dot, bins):
         
     return l_v, my_integrands
 
-#spectrum is luminosity spectrum (luminosity at all frequencies in 10^14 - 10^19 range)
+#spectrum is luminosity spectrum (luminosity at all frequencies in v_start - v_fin range)
 def spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins):
     spectrum = []
     log_vl_v = []
@@ -226,27 +251,6 @@ def plot_spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins):
     tot = trapezoid(spec, x=vs)
     print("Total luminosity from the system:")
     print(tot)
-    
-    return plt.show()
-
-#Plotting the difference between T and T_visc
-def plot_T_vs_T_visc(r_in, r_out, M, M_dot, bins, a_star):
-
-    Ts, Ts_visc, Ts_GR, new_Rs = T_vs_R(r_out, M, M_dot, bins, a_star)
-    
-    plt.plot(np.log10(new_Rs), Ts, label = 'Newton - Non viscous')
-    plt.plot(np.log10(new_Rs), Ts_visc, label = 'Newton - Viscous')
-    plt.plot(np.log10(new_Rs), Ts_GR, label = 'General Relativitiy')
-    # plt.tick_params(axis='both', color = 'white')
-    plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)', fontsize = 16)
-    plt.ylabel('T(R) / $10^{6}$K', fontsize = 16)
-    # plt.xticks(color = 'white', fontsize = 12)
-    # plt.yticks(color = 'white', fontsize = 12)
-    plt.title('Temperature as a function of $log_{10}$(Radius)', fontsize = 14)
-    plt.legend(loc = 'upper right')
-    
-    print("Max temperature with viscous forces considered:")
-    print(f"{max(Ts_visc):.2e} K")
     
     return plt.show()
 
