@@ -13,14 +13,14 @@ h = 6.62607015e-34
 k = 1.380649e-23
 m_p = 1.67262192e-27
 sigma_T = 6.6524587321e-29
-def R_g(M):
+def R_s(M):
     return (G*(M*M_sun))/(c**2)
 
 def T(r, M, M_dot):
-    return ((G*(M*M_sun)*M_dot)/(8*np.pi*((r*R_g(M))**3)*S_B_constant))**(1/4)
+    return ((G*(M*M_sun)*M_dot)/(8*np.pi*((r*R_s(M))**3)*S_B_constant))**(1/4)
 
 def T_visc(r, r_in, M, M_dot):
-    return (((3*G*(M*M_sun)*M_dot)/(8*np.pi*(((r*R_g(M))**3))*S_B_constant))*(1-((r_in/(r))**(1/2))))**(1/4)
+    return (((3*G*(M*M_sun)*M_dot)/(8*np.pi*(((r*R_s(M))**3))*S_B_constant))*(1-((r_in/(r))**(1/2))))**(1/4)
 
 #GR Temperature:
 def z_1(a_star):
@@ -48,7 +48,7 @@ def plot_rms():
 
     plt.plot(comb_a_stars, r_ms_values)
     plt.xlabel('$a_{*}$ / ?')
-    plt.ylabel('$r_{ms}$ / ${R_{g}}$')
+    plt.ylabel('$r_{ms}$ / ${R_{s}}$')
     plt.title('How $r_{ms}$ varies with spin parameter $a_{*}$')
     return plt.show()
 
@@ -92,11 +92,11 @@ def C(a_star, r):
     return 1 - (3/r) + ((2*a_star)/(r**(3/2)))
 
 def T_GR_prograde(r, M, M_dot, a_star):
-    return (((3*G*(M*M_sun)*M_dot)/(8*np.pi*((r*R_g(M))**3)*S_B_constant))*((A_prograde(a_star, r, M)-B_prograde(a_star, r, M))/C(a_star, r)))**(1/4)
+    return (((3*G*(M*M_sun)*M_dot)/(8*np.pi*((r*R_s(M))**3)*S_B_constant))*((A_prograde(a_star, r, M)-B_prograde(a_star, r, M))/C(a_star, r)))**(1/4)
 
 def T_GR_retrograde(r, M, M_dot, a_star):
-    return (((3*G*(M*M_sun)*M_dot)/(8*np.pi*((r*R_g(M))**3)*S_B_constant))*((A_retrograde(a_star, r, M)-B_retrograde(a_star, r, M))/C(a_star, r)))**(1/4)
-                                                                                                            
+    return (((3*G*(M*M_sun)*M_dot)/(8*np.pi*((r*R_s(M))**3)*S_B_constant))*((A_retrograde(a_star, r, M)-B_retrograde(a_star, r, M))/C(a_star, r)))**(1/4)
+
 def T_vs_R(r_out, M, M_dot, bins, a_star):
     if a_star >= 0:
         r_in = r_ms_prograde(a_star)
@@ -110,7 +110,7 @@ def T_vs_R(r_out, M, M_dot, bins, a_star):
     for i in range(len(Rs)-1):
         midpoint_r = (Rs[i+1] + Rs[i])/2
         new_Rs.append(midpoint_r)
-        Ts.append(T(midpoint_r, M, M_dot)) #divide by 1e6 to scale if desired
+        Ts.append(T(midpoint_r, M, M_dot)/1e6) #divide by 1e6 to scale if desired
         Ts_visc.append(T_visc(midpoint_r, r_in, M, M_dot)/1e6)
         if a_star >= 0:
             Ts_GR.append(T_GR_prograde(midpoint_r, M, M_dot, a_star)/1e6)
@@ -127,7 +127,7 @@ def plot_compare_Ts(r_out, M, M_dot, bins, a_star):
     plt.plot(np.log10(new_Rs), Ts_visc, label = 'Newton - Viscous')
     plt.plot(np.log10(new_Rs), Ts_GR, label = 'General Relativitiy')
     # plt.tick_params(axis='both', color = 'white')
-    plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)', fontsize = 16)
+    plt.xlabel('$log_{10}$($\\frac{R}{R_{s}}$)', fontsize = 16)
     plt.ylabel('T(R) / $10^{6}$K', fontsize = 16)
     # plt.xticks(color = 'white', fontsize = 12)
     # plt.yticks(color = 'white', fontsize = 12)
@@ -146,7 +146,7 @@ def plot_Ts_vary_a_star(r_out, M, M_dot, bins, a_stars):
         plt.plot(np.log10(new_Rs), Ts_visc, linestyle='--', color = random_color, label = f'Newtonian Temperature, $a_{{*}}$={a_star}')
         plt.plot(np.log10(new_Rs), Ts_GR, color = random_color, label = f'GR Temperature, $a_{{*}}$={a_star}')
 
-    plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)', fontsize = 16)
+    plt.xlabel('$log_{10}$($\\frac{R}{R_{s}}$)', fontsize = 16)
     plt.ylabel('T(R) / $10^{6}$K', fontsize = 16)
     plt.title('Temperature as a function of $log_{10}$(Radius)', fontsize = 14)
     plt.legend(loc = 'upper right')
@@ -201,7 +201,7 @@ def plot_f_v(r_in, r_out, M, M_dot, bins, a_star):
 def integrand(r, r_in, v, M, M_dot):
     t = T_visc(r, r_in, M, M_dot) #Change to T to ignore viscous forces
     f_v = F_v(t, v)
-    return f_v*4*np.pi*r*((R_g(M))**2)
+    return f_v*4*np.pi*r*((R_s(M))**2)
 
 #Now evaluate integral with trapezium rule:
 def L_v(r_in, r_out, v, M, M_dot, bins):
@@ -231,7 +231,7 @@ def spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins):
     vs = np.logspace(np.log10(v_start), np.log10(v_fin), v_steps)
     
     for v in vs:
-        l_v, my_integrands = L_v(r_in, r_out, v, M, M_dot, bins) # R_g units
+        l_v, my_integrands = L_v(r_in, r_out, v, M, M_dot, bins) # R_s units
         spectrum.append(l_v)
         log_vl_v.append(np.log10(v*l_v))
     return spectrum, vs, log_vl_v
@@ -368,10 +368,10 @@ def convergence_check_fixed_v(r_in, r_out, fixed_vs, M, M_dot):
 #r_ins is a list of varying r_in values
 def spectrum_vary_rin(r_ins, r_out, v_start, v_fin, M, M_dot, v_steps, bins):
     for r_in in r_ins:
-        spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins) #r_out constant. Usually at 10^5 R_g
+        spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins) #r_out constant. Usually at 10^5 R_s
         log_vs = np.log10(vs)
         tot = trapezoid(spec, x=vs)
-        plt.plot(log_vs, spec, label = f"$r_{{in}}$ = {r_in}$R_{{g}}$, $L_{{Tot}}$ = {tot:.1e}W")
+        plt.plot(log_vs, spec, label = f"$r_{{in}}$ = {r_in}$R_{{s}}$, $L_{{Tot}}$ = {tot:.1e}W")
 
     plt.xlabel('$log_{10}$($\\nu$ / Hz)', fontsize = 14)
     plt.ylabel('$L_{v}$ / W', fontsize = 14)
@@ -388,9 +388,9 @@ def T_visc_vary_rin(r_ins, r_out, M, M_dot, bins):
             midpoint_r = (Rs[i+1] + Rs[i])/2
             new_Rs.append(midpoint_r)
             Ts_visc.append(T_visc(midpoint_r, r_in, M, M_dot)/1e6)
-        plt.plot(np.log10(new_Rs), Ts_visc, label = f"$r_{{in}}$ = {r_in}$R_{{g}}$, {round(max(Ts_visc), 1)}$*10^6$K")
+        plt.plot(np.log10(new_Rs), Ts_visc, label = f"$r_{{in}}$ = {r_in}$R_{{s}}$, {round(max(Ts_visc), 1)}$*10^6$K")
     
-    plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)')
+    plt.xlabel('$log_{10}$($\\frac{R}{R_{s}}$)')
     plt.ylabel('T(R) / $10^6$K')
     plt.title('Viscous forces temp as a function of $log_{10}$(R) with varying $R_{in}$')
     plt.legend(loc = 'best')
@@ -407,7 +407,7 @@ def spectrum_vary_M(r_in, r_out, v_start, v_fin, Ms, M_dot, v_steps, bins):
 
     plt.xlabel('$log_{10}$($\\nu$ / Hz)', fontsize = 14)
     plt.ylabel('$L_{v}$ / W', fontsize = 14)
-    plt.title(f'Luminosity Spectrum with varying M, $r_{{in}}$={r_in}$R_{{g}}$, $\dot{{M}}$={M_dot:.1e}kg$s^{{-1}}$', fontsize = 9)
+    plt.title(f'Luminosity Spectrum with varying M, $r_{{in}}$={r_in}$R_{{s}}$, $\dot{{M}}$={M_dot:.1e}kg$s^{{-1}}$', fontsize = 9)
     plt.legend(loc = 'best')
     return plt.show()
     
@@ -422,7 +422,7 @@ def T_visc_vary_M(r_in, r_out, Ms, M_dot, bins):
             Ts_visc.append(T_visc(midpoint_r, r_in, M, M_dot)/1e6)
         plt.plot(np.log10(new_Rs), Ts_visc, label = f"M = {M}$M_{{sun}}$, $T_{{Max}}$ = {round(max(Ts_visc), 1)}$*10^6$K")
     
-    plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)')
+    plt.xlabel('$log_{10}$($\\frac{R}{R_{s}}$)')
     plt.ylabel('T(R) / $10^6$K')
     plt.title('Viscous forces temp as a function of $log_{10}$(R) with varying M')
     plt.legend(loc = 'best')
@@ -453,7 +453,7 @@ def T_visc_vary_Mdot(r_in, r_out, M, M_dots, bins):
             Ts_visc.append(T_visc(midpoint_r, r_in, M, M_dot)/1e6)
         plt.plot(np.log10(new_Rs), Ts_visc, label = f"$M_{{dot}}$ = {M_dot:.1e} Kg$s^{{-1}}$, $T_{{Max}}$ = {round(max(Ts_visc), 1)}$*10^6$K")
     
-    plt.xlabel('$log_{10}$($\\frac{R}{R_{g}}$)')
+    plt.xlabel('$log_{10}$($\\frac{R}{R_{s}}$)')
     plt.ylabel('T(R) / $10^6$K')
     plt.title('Viscous forces temp as a function of $log_{10}$(R) with varying $\dot{M}$')
     plt.legend(loc = 'best')
