@@ -4,7 +4,7 @@ from scipy.integrate import trapezoid
 import time
 import random
 
-#Defining Variables (Must reference these values in my report)
+#Defining Constants
 G = 6.6743e-11
 M_sun = 1.989e30
 S_B_constant = 5.670374419e-8
@@ -14,7 +14,7 @@ k = 1.380649e-23
 m_p = 1.67262192e-27
 sigma_T = 6.6524587321e-29
 def R_s(M):
-    return (G*(M*M_sun))/(c**2)
+    return (2*G*(M*M_sun))/(c**2)
 
 def T(r, M, M_dot):
     return ((G*(M*M_sun)*M_dot)/(8*np.pi*((r*R_s(M))**3)*S_B_constant))**(1/4)
@@ -36,22 +36,22 @@ def r_ms_retrograde(a_star):
     return 3 + z_2(a_star) + ((3-z_1(a_star))*(3+z_1(a_star)+2*z_2(a_star)))**(1/2)
 
 def plot_rms():
-    retro_a_stars = np.linspace(-1, 0, 101)
-    pro_a_stars = np.linspace(0.01, 1, 100)
+    retro_a_stars = np.linspace(-0.998, 0, 101)
+    pro_a_stars = np.linspace(0.01, 0.998, 100)
     r_ms_values = []
     for a_star in retro_a_stars:
         r_ms_values.append(r_ms_retrograde(a_star))
     for a_star in pro_a_stars:
         r_ms_values.append(r_ms_prograde(a_star))
 
-    comb_a_stars = np.linspace(-1, 1, 201)
+    comb_a_stars = np.linspace(-0.998, 0.998, 201)
 
     plt.plot(comb_a_stars, r_ms_values)
-    plt.xlabel('$a_{*}$ / ?')
-    plt.ylabel('$r_{ms}$ / ${R_{s}}$')
-    plt.title('How $r_{ms}$ varies with spin parameter $a_{*}$')
+    plt.xlabel('$a_{*}$', fontsize = 16)
+    plt.ylabel('$r_{in}/R_{s}$', fontsize = 16)
+    # plt.title('How $r_{ms}$ varies with spin parameter $a_{*}$')
     return plt.show()
-
+    
 def y_ms_prograde(a_star):
     return (r_ms_prograde(a_star))**(1/2)
 
@@ -131,24 +131,28 @@ def plot_compare_Ts(r_out, M, M_dot, bins, a_star):
     plt.ylabel('T(R) / $10^{6}$K', fontsize = 16)
     # plt.xticks(color = 'white', fontsize = 12)
     # plt.yticks(color = 'white', fontsize = 12)
-    plt.title('Temperature as a function of $log_{10}$(Radius)', fontsize = 14)
+    # plt.title('Temperature as a function of $log_{10}$(Radius)', fontsize = 14)
     plt.legend(loc = 'upper right')
     
-    print("Max temperature with viscous forces considered:")
-    print(f"{max(Ts_visc):.2e} K")
+    # print("Max temperature with viscous forces considered:")
+    # print(f"{max(Ts_visc):.2e} K")
     
     return plt.show()
 
 def plot_Ts_vary_a_star(r_out, M, M_dot, bins, a_stars):
+    colours = ['blue', 'orange', 'green', 'red', 'grey']
+    i=0
     for a_star in a_stars:
-        random_color = [random.random() for _ in range(3)]
+        #random_color = [random.random() for _ in range(3)]
+        random_color = colours[i]
         Ts, Ts_visc, Ts_GR, new_Rs = T_vs_R(r_out, M, M_dot, bins, a_star)
-        plt.plot(np.log10(new_Rs), Ts_visc, linestyle='--', color = random_color, label = f'Newtonian Temperature, $a_{{*}}$={a_star}')
-        plt.plot(np.log10(new_Rs), Ts_GR, color = random_color, label = f'GR Temperature, $a_{{*}}$={a_star}')
+        plt.plot(np.log10(new_Rs), Ts_GR, color = random_color, label = f'General Relativity, $a_{{*}}$={a_star}')
+        plt.plot(np.log10(new_Rs), Ts_visc, linestyle='--', color = random_color, label = f'Newton - Viscous')
+        i+=1
 
     plt.xlabel('$log_{10}$($\\frac{R}{R_{s}}$)', fontsize = 16)
     plt.ylabel('T(R) / $10^{6}$K', fontsize = 16)
-    plt.title('Temperature as a function of $log_{10}$(Radius)', fontsize = 14)
+   # plt.title('Temperature as a function of $log_{10}$(Radius)', fontsize = 14)
     plt.legend(loc = 'upper right')
 
     return plt.show()
@@ -371,11 +375,11 @@ def spectrum_vary_rin(r_ins, r_out, v_start, v_fin, M, M_dot, v_steps, bins):
         spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins) #r_out constant. Usually at 10^5 R_s
         log_vs = np.log10(vs)
         tot = trapezoid(spec, x=vs)
-        plt.plot(log_vs, spec, label = f"$r_{{in}}$ = {r_in}$R_{{s}}$, $L_{{Tot}}$ = {tot:.1e}W")
+        plt.plot(log_vs, [x/1e11 for x in spec], label = f"$r_{{in}}$ = {r_in}$R_{{s}}$, $L_{{Tot}}$ = {tot:.1e}W")
 
-    plt.xlabel('$log_{10}$($\\nu$ / Hz)', fontsize = 14)
-    plt.ylabel('$L_{v}$ / W', fontsize = 14)
-    plt.title(f'Luminosity Spectrum - vary $r_{{in}}$')
+    plt.xlabel('$log_{10}$($\\nu$ / Hz)', fontsize = 16)
+    plt.ylabel('$L_{v}$ / $10^{11}$W', fontsize = 16)
+    # plt.title(f'Luminosity Spectrum - vary $r_{{in}}$')
     plt.legend(loc = 'best')
     return plt.show()
 
@@ -403,11 +407,11 @@ def spectrum_vary_M(r_in, r_out, v_start, v_fin, Ms, M_dot, v_steps, bins):
         spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins)
         log_vs = np.log10(vs)
         tot = trapezoid(spec, x=vs)
-        plt.plot(log_vs, spec, label = f"M = {M}$M_{{sun}}$, $L_{{Tot}}$ = {tot:.1e}W")
+        plt.plot(log_vs, [x/1e11 for x in spec], label = f"M = {M}$M_{{\odot}}$, $L_{{Tot}}$ = {tot:.1e}W")
 
-    plt.xlabel('$log_{10}$($\\nu$ / Hz)', fontsize = 14)
-    plt.ylabel('$L_{v}$ / W', fontsize = 14)
-    plt.title(f'Luminosity Spectrum with varying M, $r_{{in}}$={r_in}$R_{{s}}$, $\dot{{M}}$={M_dot:.1e}kg$s^{{-1}}$', fontsize = 9)
+    plt.xlabel('$log_{10}$($\\nu$ / Hz)', fontsize = 16)
+    plt.ylabel('$L_{v}$ / $10^{11}$W', fontsize = 16)
+    # plt.title(f'Luminosity Spectrum with varying M, $r_{{in}}$={r_in}$R_{{s}}$, $\dot{{M}}$={M_dot:.1e}kg$s^{{-1}}$', fontsize = 9)
     plt.legend(loc = 'best')
     return plt.show()
     
@@ -420,7 +424,7 @@ def T_visc_vary_M(r_in, r_out, Ms, M_dot, bins):
             midpoint_r = (Rs[i+1] + Rs[i])/2
             new_Rs.append(midpoint_r)
             Ts_visc.append(T_visc(midpoint_r, r_in, M, M_dot)/1e6)
-        plt.plot(np.log10(new_Rs), Ts_visc, label = f"M = {M}$M_{{sun}}$, $T_{{Max}}$ = {round(max(Ts_visc), 1)}$*10^6$K")
+        plt.plot(np.log10(new_Rs), Ts_visc, label = f"M = {M}$M_{{\odot}}$, $T_{{Max}}$ = {round(max(Ts_visc), 1)}$*10^6$K")
     
     plt.xlabel('$log_{10}$($\\frac{R}{R_{s}}$)')
     plt.ylabel('T(R) / $10^6$K')
@@ -434,11 +438,11 @@ def spectrum_vary_Mdot(r_in, r_out, v_start, v_fin, M, M_dots, v_steps, bins):
         spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins)
         log_vs = np.log10(vs)
         tot = trapezoid(spec, x=vs)
-        plt.plot(log_vs, spec, label = f"$M_{{dot}}$ = {M_dot:.1e} Kg$s^{{-1}}$, $L_{{Tot}}$ = {tot:.1e}W")
+        plt.plot(log_vs, [x/1e11 for x in spec], label = f"$M_{{dot}}$ = {M_dot:.1e} Kg$s^{{-1}}$, $L_{{Tot}}$ = {tot:.1e}W")
 
-    plt.xlabel('$log_{10}$($\\nu$ / Hz)', fontsize = 14)
-    plt.ylabel('$L_{v}$ / W', fontsize = 14)
-    plt.title(f'Luminosity Spectrum - vary $\dot{{M}}$')
+    plt.xlabel('$log_{10}$($\\nu$ / Hz)', fontsize = 16)
+    plt.ylabel('$L_{v}$ / $10^{11}$W', fontsize = 16)
+    # plt.title(f'Luminosity Spectrum - vary $\dot{{M}}$')
     plt.legend(loc = 'best')
     return plt.show()
 
@@ -469,7 +473,7 @@ def spectrum_edd_vary_M(r_in, r_out, v_start, v_fin, Ms, eta, v_steps, bins):
         spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins)
         log_vs = np.log10(vs)
         tot = trapezoid(spec, x=vs)
-        plt.plot(log_vs, [x/1e13 for x in spec], label = f"M = {M}$M_{{sun}}$, $L_{{Edd}}$ = {tot:.1e}W")
+        plt.plot(log_vs, [x/1e13 for x in spec], label = f"M = {M}$M_{{\odot}}$, $L_{{Edd}}$ = {tot:.1e}W")
 
     plt.xlabel('$log_{10}$($\\nu$ / Hz)', fontsize = 14)
     plt.ylabel('$L_{v}$ / $10^{13}$W', fontsize = 14)
@@ -481,19 +485,19 @@ def spectrum_edd_vary_M(r_in, r_out, v_start, v_fin, Ms, eta, v_steps, bins):
 def convergence_test_spec_edd(r_in, r_out, v_start, v_fin, Ms, eta, v_steps, ref_bins):
     start = time.time()
     bins_test = [500, 1000, 2000, 5000, 20000]
-    #log_bins = np.log10(bins_test)
+    log_bins = np.log10(bins_test)
     
     for M in Ms:
         M_dot = L_edd(M)/(eta*(c)**2)
         ref_spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, ref_bins)
         log_vs = np.log10(vs)
         ref_tot = trapezoid(ref_spec, x=vs)
-       # total_ratios = []
+        total_ratios = []
         all_spectrums = np.array(ref_spec)
         for bins in bins_test:
             spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_steps, bins) 
             tot = trapezoid(spec, x=vs)
-           # total_ratios.append(tot/ref_tot)
+            total_ratios.append(tot/ref_tot)
             all_spectrums = np.vstack((all_spectrums, spec))
         normalised_spectrums = all_spectrums/all_spectrums[0, :]
         plt.figure()
@@ -507,15 +511,15 @@ def convergence_test_spec_edd(r_in, r_out, v_start, v_fin, Ms, eta, v_steps, ref
 
         plt.xlabel('$log_{10}$($\\nu$ / Hz)')
         plt.ylabel('$\\frac{L_{v}}{L_{v}(Ref)}$')
-        plt.title(f'Convergence testing for spectrum, M={M}$M_{{Sun}}$, \u03B7={eta}')
+        plt.title(f'Convergence testing for spectrum, M={M}$M_{{\odot}}$, \u03B7={eta}')
         plt.legend(loc = 'best')
     
-        # plt.figure()
-        # plt.plot(log_bins, total_ratios)
-        # plt.plot(log_bins, [1,1,1,1,1]) #This represents the reference spectrum of 10000 bins
-        # plt.xlabel('$log_{10}$(No of bins)')
-        # plt.ylabel('$\\frac{L_{Tot}}{L_{Tot}(Ref)}$')
-        # plt.title(f'Convergence testing for $L_{{Tot}}$, M={M}$M_{{Sun}}$, \u03B7={eta}')
+        plt.figure()
+        plt.plot(log_bins, total_ratios)
+        plt.plot(log_bins, [1,1,1,1,1]) #This represents the reference spectrum of 10000 bins
+        plt.xlabel('$log_{10}$(No of bins)')
+        plt.ylabel('$\\frac{L_{Tot}}{L_{Tot}(Ref)}$')
+        plt.title(f'Convergence testing for $L_{{Tot}}$, M={M}$M_{{\odot}}$, \u03B7={eta}')
 
     end = time.time()
     print(end - start)
