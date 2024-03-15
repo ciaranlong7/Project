@@ -394,6 +394,29 @@ def spectrum_vary_rin(r_ins, r_out, v_start, v_fin, M, M_dot, v_bins, bins, a_st
     plt.legend(loc = 'best')
     return plt.show()
 
+def spectrum_vary_rin_M_dot(r_ins, r_out, v_start, v_fin, M, M_dots, v_bins, bins, a_star):
+    colours = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2',
+ '#7f7f7f', '#bcbd22', '#17becf']
+    #coded to work with 2 M_dots
+    j = 0
+    for r_in in r_ins:
+        for i, M_dot in enumerate(M_dots):
+            spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_bins, bins, a_star) #r_out constant. Usually at 10^5 R_s
+            log_vs = np.log10(vs)
+            tot = trapezoid(spec, x=vs)
+            if i == 0:
+                plt.plot(log_vs, [x/1e11 for x in spec], color = colours[j], label = f"$r_{{in}}$ = {r_in}$R_{{s}}$, $L_{{Tot}}$ = {tot:.1e}W")
+            else:
+                plt.plot(log_vs, [x/1e11 for x in spec], color = colours[j], linestyle = '--', label = f"$r_{{in}}$ = {r_in}$R_{{s}}$, $L_{{Tot}}$ = {tot:.1e}W")
+
+        j+=1
+    
+    plt.xlabel('$log_{10}$($\\nu$ / Hz)', fontsize = 16)
+    plt.ylabel('$L_{\\nu}$ / $10^{11}$W', fontsize = 16)
+    # plt.title(f'Luminosity Spectrum - vary $r_{{in}}$')
+    plt.legend(loc = 'best')
+    return plt.show()
+
 def T_visc_vary_rin(r_ins, r_out, M, M_dot, bins):
     for r_in in r_ins:
         Rs = np.logspace(np.log10(r_in), np.log10(r_out), bins)
@@ -446,6 +469,8 @@ def T_visc_vary_Mdot(r_in, r_out, M, M_dots, bins):
 #Ms is a list of varying M values
 #Now use a GR Temp model
 def spectrum_vary_M_a_star(r_out, v_start, v_fin, Ms, M_dot, v_bins, bins, a_stars):
+    colours = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2',
+ '#7f7f7f', '#bcbd22', '#17becf']
     #coded to for plot to 'work' with only 2 a_stars (still will run just won't look as neat)
     for M in Ms:
         for i, a_star in enumerate(a_stars):
@@ -457,9 +482,9 @@ def spectrum_vary_M_a_star(r_out, v_start, v_fin, Ms, M_dot, v_bins, bins, a_sta
             log_vs = np.log10(vs)
             tot = trapezoid(spec, x=vs)
             if i == 0:
-                plt.plot(log_vs, [x/1e11 for x in spec], label = f"M = {M}$M_{{\odot}}$, $L_{{Tot}}$ = {tot:.1e}W")
+                plt.plot(log_vs, [x/1e11 for x in spec], label = f"M = {M}$M_{{\odot}}$, $a_{{*}}$ = {a_star}, $L_{{Tot}}$ = {tot:.1e}W")
             else:
-                plt.plot(log_vs, [x/1e11 for x in spec], linestyle = '--', label = f"M = {M}$M_{{\odot}}$, $L_{{Tot}}$ = {tot:.1e}W")
+                plt.plot(log_vs, [x/1e11 for x in spec], linestyle = '--', label = f"M = {M}$M_{{\odot}}$, $a_{{*}}$ = {a_star}, $L_{{Tot}}$ = {tot:.1e}W")
 
     plt.xlabel('$log_{10}$($\\nu$ / Hz)', fontsize = 16)
     plt.ylabel('$L_{\\nu}$ / $10^{11}$W', fontsize = 16)
@@ -494,6 +519,7 @@ def L_edd(M):
 def eta_M_dot_vs_a_star(r_out, v_start, v_fin, M, M_dot, v_bins, bins):
     start = time.time()
     a_stars = np.linspace(-0.998, 0.998, 8)
+    Eddington_L = L_edd(M)
     
     #calculate efficiencies:
     efficiencies = []
@@ -507,9 +533,7 @@ def eta_M_dot_vs_a_star(r_out, v_start, v_fin, M, M_dot, v_bins, bins):
             r_in = r_ms_prograde(a_star)
         spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_bins, bins, a_star)
         tot = trapezoid(spec, x=vs)
-        Eddington = L_edd(M)
-        efficiency = tot/L_edd(M)
-        efficiencies.append(efficiency)
+        efficiencies.append(tot/Eddington_L)
         # new_M_dot = (Eddington*(c**2))/(efficiency)
         # M_dots.append(new_M_dot)
         print(i)
@@ -519,51 +543,85 @@ def eta_M_dot_vs_a_star(r_out, v_start, v_fin, M, M_dot, v_bins, bins):
 
     return a_stars, efficiencies#, M_dots
 
-# #Plot efficiency against a_star
-# plt.plot(a_stars, efficiencies)
-# plt.xlabel('$\u03B7$', fontsize = 16)
-# plt.ylabel('$a_*$', fontsize = 16)
-# plt.show()
+#Theoretical etas from fanidakis 2011 paper
+def fanidakis_eta(a_star):
+    if a_star >= 0:
+        r_in = r_ms_prograde(a_star)
+    else:
+        r_in = r_ms_retrograde(a_star)
+    return 1-np.sqrt(1-((2/3)*(1/r_in)))
 
-# #Plot accretion rate against a_star
-# plt.plot(a_stars, M_dots)
-# plt.xlabel('$\u03B7$', fontsize = 16)
-# plt.ylabel('$a_*$', fontsize = 16)
-# plt.show()
+def fanidakis():
+    a_stars = np.linspace(-0.998, 0.998, 101)
+    efficiency = []
+    for a_star in a_stars:
+        efficiency.append(fanidakis_eta(a_star))
+    return efficiency
+
+efficiency = fanidakis()
+#a_stars, efficiencies = eta_M_dot_vs_a_star(1e6, 1e12, 1e18, 3, 10**13, 1000, 1000)
+#Need to uncomment and call above two lines first
+def plot_eta_vs_a_star():
+    # Calculate the residuals
+    residuals = []
+    for i in range(len(efficiencies)):
+        residuals.append(efficiencies[i]*100 - efficiency[i])
+    
+    fig, axs = plt.subplots(2, 1, sharex=True, gridspec_kw={'height_ratios': [2, 1]})
+    # Remove vertical space between axes
+    fig.subplots_adjust(hspace=0)
+    
+    # Plot each graph, and manually set the y tick values
+    axs[0].plot(a_stars, efficiency, label = 'Theoretical Method')
+    axs[0].plot(a_stars, np.array(efficiencies)*100, label = "This Research's Method")
+    axs[0].legend(loc='best')
+    axs[0].set_ylabel('\u03B7', fontsize = 16)
+    axs[0].set_yticks([0, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45])
+    
+    axs[1].scatter(a_stars, residuals)
+    axs[1].plot(a_stars, [0]*len(a_stars), linestyle = '--', color = 'black')
+    axs[1].set_xlabel('$a_*$', fontsize = 16)
+    axs[1].set_ylabel('$\u03B7_{RM} - \u03B7_{TM}$', fontsize = 16)
+    axs[1].set_yticks([-0.1, -0.05, 0, 0.05, 0.1])
+    axs[1].set_ylim(-0.16, 0.16)
+    
+    return plt.show()
 
 #Function built for GR temp for Eddington model since varying a_*. Hence no r_in argument.
-def spectrum_edd_vary_a_star(r_out, v_start, v_fin, M, v_bins, bins, a_stars):
-    
-    for a_star in a_stars:
+def spectrum_edd_vary_a_star(r_out, v_start, v_fin, M, v_bins, bins, test_a_stars):
+    colours = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2',
+ '#7f7f7f', '#bcbd22', '#17becf']
+    Eddington = L_edd(M)
+    totals = []
+    specs = []
+    for i, a_star in enumerate(test_a_stars):
         if a_star >= 0:
             r_in = r_ms_prograde(a_star)
         else:
             r_in = r_ms_retrograde(a_star)
-        eta_interpolated = np.interp(a_star, a_stars, efficiencies)
-        M_dot = L_edd(M)/(eta_interpolated*(c**2))
+        eta_interpolated = np.interp(a_star, a_stars, efficiency)
+        M_dot = Eddington/(eta_interpolated*(c**2))
         spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_bins, bins, a_star)
         log_vs = np.log10(vs)
         tot = trapezoid(spec, x=vs)
-        plt.plot(log_vs, [x/1e13 for x in spec], color = colours[j], label = f"\u03B7 = {eta_interpolated},  a_star = {a_star}, $L_{{Tot}}$ = {tot:.1e}")
+        totals.append(tot)
+        specs.append(spec)
+        print(i)
     
-    plt.xlabel('$log_{10}$($\\nu$ / Hz)', fontsize = 16)
-    plt.ylabel('$L_{\\nu}$ / $10^{13}$W', fontsize = 16)
-    # plt.title('Luminosity Spectrum of Eddington limited accretion disk - vary M')
-    plt.legend(loc = 'best')
-    
-    return plt.show()
+    return totals, specs, log_vs
 
 #Convergence testing on one of the spectra from the above function
 def convergence_test_one_spec_edd(r_out, v_start, v_fin, M, v_bins, ref_bins, a_star):
     start = time.time()
     bins_test = [500, 1000, 2000, 5000, 10000]
-    log_bins = np.log10(bins_test)
 
     if a_star >= 0:
         r_in = r_ms_prograde(a_star)
     else:
         r_in = r_ms_retrograde(a_star)
-    eta_interpolated = np.interp(a_star, a_stars, efficiencies)
+    print(len(a_stars))
+    print(len(efficiency))
+    eta_interpolated = np.interp(a_star, a_stars, efficiency)
     M_dot = L_edd(M)/(eta_interpolated*(c)**2)
     ref_spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_bins, ref_bins, a_star)
     log_vs = np.log10(vs)
@@ -591,7 +649,7 @@ def convergence_test_one_spec_edd(r_out, v_start, v_fin, M, v_bins, ref_bins, a_
     print(end - start)
 
     return plt.show()
-
+    
 #Convergence testing on all spectra from the spectrum_edd_vary_a_star function.
 #This also does convergence testing on L_Tot
 def convergence_test_spec_edd(r_out, v_start, v_fin, M, v_bins, bins, a_stars):
@@ -604,7 +662,7 @@ def convergence_test_spec_edd(r_out, v_start, v_fin, M, v_bins, bins, a_stars):
             r_in = r_ms_prograde(a_star)
         else:
             r_in = r_ms_retrograde(a_star)
-        eta_interpolated = np.interp(a_star, a_stars, efficiencies)
+        eta_interpolated = np.interp(a_star, a_stars, efficiency)
         M_dot = L_edd(M)/(eta_interpolated*(c)**2)
         ref_spec, vs, log_vl_v = spectrum(r_in, r_out, v_start, v_fin, M, M_dot, v_bins, ref_bins, a_star)
         log_vs = np.log10(vs)
